@@ -1320,10 +1320,13 @@ void Tablebases::init(const std::string& paths) {
     // are Binomial[k][n] ways to choose k elements from a set of n elements.
     Binomial[0][0] = 1;
 
-    for (int n = 1; n < 64; n++) // Squares
-        for (int k = 0; k < 6 && k <= n; ++k) // Pieces
-            Binomial[k][n] =  (k > 0 ? Binomial[k - 1][n - 1] : 0)
-                            + (k < n ? Binomial[k    ][n - 1] : 0);
+    for (int n = 1; n < 64; n++) { // Squares
+        Binomial[0][n] = 1;
+        Binomial[1][n] = n;
+        for (int k = 2; k < 6 && k <= n; ++k) { // Pieces
+            Binomial[k][n] = Binomial[k - 1][n - 1] + (k < n ? Binomial[k    ][n - 1] : 0);
+        }
+    }
 
     // MapPawns[s] encodes squares a2-h7 to 0..47. This is the number of possible
     // available squares when the leading one is in 's'. Moreover the pawn with
