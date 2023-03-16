@@ -58,6 +58,11 @@ using Eval::evaluate;
 using namespace Search;
 
 namespace {
+  int b1 = -200, b2 = -100, b3 = 0,
+  v1 = -100, v2 = 0, v3 = 0,
+  a1 = -100, a2 = 0, a3 = 0;
+
+TUNE(SetRange(-500, 500), b1, b2, b3, v1, v2, v3, a1, a2, a3);
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
@@ -1103,15 +1108,15 @@ moves_loop: // When in check, search starts here
 
               // If the eval of ttMove is greater than beta, we reduce it (negative extension)
               else if (ttValue >= beta)
-                  extension = -2 - !PvNode;
+                  extension = (b1 + b2 * !PvNode + b3 * cutNode) / 100;
 
               // If the eval of ttMove is less than value, we reduce it (negative extension)
               else if (ttValue <= value)
-                  extension = -1;
+                  extension = (v1 + v2 * !PvNode + v3 * cutNode) / 100;
 
               // If the eval of ttMove is less than alpha, we reduce it (negative extension)
               else if (ttValue <= alpha)
-                  extension = -1;
+                  extension = (a1 + a2 * !PvNode + a3 * cutNode) / 100;
           }
 
           // Check extensions (~1 Elo)
