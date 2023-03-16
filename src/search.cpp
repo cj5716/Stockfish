@@ -513,6 +513,14 @@ void Thread::search() {
                 skill.best ? skill.best : skill.pick_best(multiPV)));
 }
 
+int b1 = -2, b2 = -1, b3 = 0,
+    v1 = -1, v2 = 0, v3 = 0,
+    a1 = -1, a2 = 0, a3 = 0,
+    e1 = 0, e2 = 0, e3 = 0;
+
+TUNE(b1, b2, b3, v1, v2, v3, a1, a2, a3, e1, e2, e3);
+TUNE(SetRange(-6, 6), b1, b2, b3, v1, v2, v3, a1, a2, a3, e1, e2, e3);
+
 
 namespace {
 
@@ -1102,15 +1110,18 @@ moves_loop: // When in check, search starts here
 
               // If the eval of ttMove is greater than beta, we reduce it (negative extension)
               else if (ttValue >= beta)
-                  extension = -2 - !PvNode;
+                  extension = b1 + (b2 * !PvNode) + (b3 * cutNode);
 
               // If the eval of ttMove is less than value, we reduce it (negative extension)
               else if (ttValue <= value)
-                  extension = -1;
+                  extension = v1 + (v2 * !PvNode) + (v3 * cutNode);
 
               // If the eval of ttMove is less than alpha, we reduce it (negative extension)
               else if (ttValue <= alpha)
-                  extension = -1;
+                  extension = a1 + (a2 * !PvNode) + (a3 * cutNode);
+
+              else
+                  extension = e1 + (e2 * !PvNode) + (e3 * cutNode);
           }
 
           // Check extensions (~1 Elo)
