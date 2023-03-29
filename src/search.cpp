@@ -76,7 +76,7 @@ namespace {
   }
 
   constexpr int futility_move_count(bool improving, Depth depth) {
-    return (3 + depth * depth) / (improving ? 1 : 2);
+    return (3 + depth * depth) >> (improving ? 0 : 1);
   }
 
   // History and stats update bonus, based on depth
@@ -1152,32 +1152,18 @@ moves_loop: // When in check, search starts here
 
       // Decrease reduction if position is or has been on the PV
       // and node is not likely to fail low. (~3 Elo)
-      r -= 2 * (ss->ttPv && !likelyFailLow);
-
       // Decrease reduction if opponent's move count is high (~1 Elo)
-      r -= ((ss-1)->moveCount > 7);
-
+      // Decrease reduction if ttMove has been singularly extended (~1 Elo)
+      // Decrease reduction if we move a threatened piece (~1 Elo)
+      // Decrease reduction if move is a killer and we have a good history (~1 Elo)
       // Increase reduction for cut nodes (~3 Elo)
-      r += 2 * cutNode;
-
       // Increase reduction if ttMove is a capture (~3 Elo)
-      r += ttCapture;
+      // Increase reduction if next ply has a lot of fail high (~5 Elo)
+      r += cutNode*2 + ttCapture + ((ss+1)->cutoffCnt > 3) - ((ss->ttPv && !likelyFailLow)*2) - ((ss-1)->moveCount > 7) - (singularQuietLMR) - (depth > 9 && (mp.threatenedPieces & from_sq(move))) - (move == ss->killers[0] && (*contHist[0])[movedPiece][to_sq(move)] >= 3722);
 
       // Decrease reduction for PvNodes based on depth (~2 Elo)
       if (PvNode)
           r -= 1 + 12 / (3 + depth);
-
-      // Decrease reduction if ttMove has been singularly extended (~1 Elo)
-      r -= singularQuietLMR;
-
-      // Decrease reduction if we move a threatened piece (~1 Elo)
-      r -= (depth > 9 && (mp.threatenedPieces & from_sq(move)));
-
-      // Increase reduction if next ply has a lot of fail high (~5 Elo)
-      r += ((ss+1)->cutoffCnt > 3);
-
-      // Decrease reduction if move is a killer and we have a good history (~1 Elo)
-      r -= (move == ss->killers[0] && (*contHist[0])[movedPiece][to_sq(move)] >= 3722);
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
@@ -1221,7 +1207,8 @@ moves_loop: // When in check, search starts here
               if (newDepth > d)
                   value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth, !cutNode);
 
-              int bonus = (2 * (value > alpha) - 1) * stat_bonus(newDepth);
+              int bonus = value > alpha ?  stat_bonus(newDepth)
+                                        : -stat_bonus(newDepth);
 
               update_continuation_histories(ss, movedPiece, to_sq(move), bonus);
           }
