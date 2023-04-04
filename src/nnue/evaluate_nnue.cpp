@@ -226,27 +226,12 @@ namespace Stockfish::Eval::NNUE {
     buffer[0] = (v < 0 ? '-' : v > 0 ? '+' : ' ');
 
     int cp = std::abs(100 * v / UCI::NormalizeToPawnValue);
-    if (cp >= 10000)
-    {
-        buffer[1] = '0' + cp / 10000; cp %= 10000;
-        buffer[2] = '0' + cp / 1000; cp %= 1000;
-        buffer[3] = '0' + cp / 100;
-        buffer[4] = ' ';
-    }
-    else if (cp >= 1000)
-    {
-        buffer[1] = '0' + cp / 1000; cp %= 1000;
-        buffer[2] = '0' + cp / 100; cp %= 100;
-        buffer[3] = '.';
-        buffer[4] = '0' + cp / 10;
-    }
-    else
-    {
-        buffer[1] = '0' + cp / 100; cp %= 100;
-        buffer[2] = '.';
-        buffer[3] = '0' + cp / 10; cp %= 10;
-        buffer[4] = '0' + cp / 1;
-    }
+    std::string cps = std::to_string(float(cp) / 100);
+    buffer[1] << cps[0];
+    buffer[2] << cps[1];
+    buffer[3] << cps[2];
+    buffer[4] << (cp >= 10000 ? ' ' : cps[3]);
+
   }
 
 
