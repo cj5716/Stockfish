@@ -170,7 +170,7 @@ namespace Stockfish::Eval::NNUE {
 
     // Give more value to positional evaluation when adjusted flag is set
     if (adjusted)
-        return static_cast<Value>(((999) * psqt + (1047) * positional) / (1024 * OutputScale));
+        return static_cast<Value>(((1001) * psqt + (1049) * positional) / (1024 * OutputScale));
     else
         return static_cast<Value>((psqt + positional) / OutputScale);
   }
