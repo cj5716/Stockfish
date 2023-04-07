@@ -916,12 +916,7 @@ moves_loop: // When in check, search starts here
     if (   ss->inCheck
         && !PvNode
         && depth >= 2
-        && ttCapture
-        && (tte->bound() & BOUND_LOWER)
-        && tte->depth() >= depth - 3
-        && ttValue >= probCutBeta
-        && abs(ttValue) <= VALUE_KNOWN_WIN
-        && abs(beta) <= VALUE_KNOWN_WIN)
+        && ttCapture)
         return probCutBeta;
 
     const PieceToHistory* contHist[] = { (ss-1)->continuationHistory, (ss-2)->continuationHistory,
