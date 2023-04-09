@@ -1120,8 +1120,8 @@ moves_loop: // When in check, search starts here
               else if (ttValue <= value)
                   extension = -1;
 
-              // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= alpha)
+              // If the eval of ttMove is less than alpha and we are on a non PV node, we reduce it (negative extension) (~1 Elo)
+              else if (ttValue <= alpha && !PvNode)
                   extension = -1;
           }
 
