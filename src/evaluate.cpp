@@ -264,26 +264,26 @@ namespace {
   constexpr Value CorneredBishop = Value(50);
 
   // Assorted bonuses and penalties
-  constexpr Score UncontestedOutpost  = S( v1,  v2);
-  constexpr Score BishopOnKingRing    = S( v3,  v4);
-  constexpr Score BishopXRayPawns     = S( v5,  v6);
-  constexpr Score FlankAttacks        = S( v7,  v8);
-  constexpr Score Hanging             = S( v9, v10);
-  constexpr Score KnightOnQueen       = S(v11, v12);
-  constexpr Score LongDiagonalBishop  = S(v13, v14);
-  constexpr Score MinorBehindPawn     = S(v15, v16);
-  constexpr Score PassedFile          = S(v17, v18);
-  constexpr Score PawnlessFlank       = S(v19, v20);
-  constexpr Score ReachableOutpost    = S(v21, v22);
-  constexpr Score RestrictedPiece     = S(v23, v24);
-  constexpr Score RookOnKingRing      = S(v25, v26);
-  constexpr Score SliderOnQueen       = S(v27, v28);
-  constexpr Score ThreatByKing        = S(v29, v30);
-  constexpr Score ThreatByPawnPush    = S(v31, v32);
-  constexpr Score ThreatBySafePawn    = S(v33, v34);
-  constexpr Score TrappedRook         = S(v35, v36);
-  constexpr Score WeakQueenProtection = S(v37, v38);
-  constexpr Score WeakQueen           = S(v39, v40);
+   Score UncontestedOutpost  = S( v1,  v2);
+   Score BishopOnKingRing    = S( v3,  v4);
+   Score BishopXRayPawns     = S( v5,  v6);
+   Score FlankAttacks        = S( v7,  v8);
+   Score Hanging             = S( v9, v10);
+   Score KnightOnQueen       = S(v11, v12);
+   Score LongDiagonalBishop  = S(v13, v14);
+   Score MinorBehindPawn     = S(v15, v16);
+   Score PassedFile          = S(v17, v18);
+   Score PawnlessFlank       = S(v19, v20);
+   Score ReachableOutpost    = S(v21, v22);
+   Score RestrictedPiece     = S(v23, v24);
+   Score RookOnKingRing      = S(v25, v26);
+   Score SliderOnQueen       = S(v27, v28);
+   Score ThreatByKing        = S(v29, v30);
+   Score ThreatByPawnPush    = S(v31, v32);
+   Score ThreatBySafePawn    = S(v33, v34);
+   Score TrappedRook         = S(v35, v36);
+   Score WeakQueenProtection = S(v37, v38);
+   Score WeakQueen           = S(v39, v40);
 
 
 #undef S
