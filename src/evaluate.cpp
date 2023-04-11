@@ -58,6 +58,11 @@ using namespace std;
 
 namespace Stockfish {
 
+int v1 = 0, v2 = 10, v3 = 24, v4 = 0, v5 = 4, v6 = 5, v7 = 8, v8 = 0, v9 = 72, v10 = 40, v11 = 16, v12 = 11, v13 = 45, v14 = 0, v15 = 18, v16 = 3, v17 = 13, v18 = 8, v19 = 19, v20 = 97, v21 = 33, v22 = 19, v23 = 6, v24 = 7, v25 = 16, v26 = 0, v27 = 62, v28 = 21, v29 = 24, v30 = 87, v31 = 48, v32 = 39, v33 = 167, v34 = 99, v35 = 55, v36 = 13, v37 = 14, v38 = 0, v39 = 57, v40 = 19;
+
+TUNE(v2, v3, v5, v6, v7, v9, v10, v11, v12, v13, v15, v16, v17, v18, v19, v20, v21, v22, v23, v24, v25, v27, v28, v29, v30, v31, v32, v33, v34, v35, v36, v37, v39, v40);
+TUNE(SetRange(-50, 50), v1, v4, v8, v14, v26, v38);
+
 namespace Eval {
 
   bool useNNUE;
@@ -259,26 +264,26 @@ namespace {
   constexpr Value CorneredBishop = Value(50);
 
   // Assorted bonuses and penalties
-  constexpr Score UncontestedOutpost  = S(  0, 10);
-  constexpr Score BishopOnKingRing    = S( 24,  0);
-  constexpr Score BishopXRayPawns     = S(  4,  5);
-  constexpr Score FlankAttacks        = S(  8,  0);
-  constexpr Score Hanging             = S( 72, 40);
-  constexpr Score KnightOnQueen       = S( 16, 11);
-  constexpr Score LongDiagonalBishop  = S( 45,  0);
-  constexpr Score MinorBehindPawn     = S( 18,  3);
-  constexpr Score PassedFile          = S( 13,  8);
-  constexpr Score PawnlessFlank       = S( 19, 97);
-  constexpr Score ReachableOutpost    = S( 33, 19);
-  constexpr Score RestrictedPiece     = S(  6,  7);
-  constexpr Score RookOnKingRing      = S( 16,  0);
-  constexpr Score SliderOnQueen       = S( 62, 21);
-  constexpr Score ThreatByKing        = S( 24, 87);
-  constexpr Score ThreatByPawnPush    = S( 48, 39);
-  constexpr Score ThreatBySafePawn    = S(167, 99);
-  constexpr Score TrappedRook         = S( 55, 13);
-  constexpr Score WeakQueenProtection = S( 14,  0);
-  constexpr Score WeakQueen           = S( 57, 19);
+  constexpr Score UncontestedOutpost  = S( v1,  v2);
+  constexpr Score BishopOnKingRing    = S( v3,  v4);
+  constexpr Score BishopXRayPawns     = S( v5,  v6);
+  constexpr Score FlankAttacks        = S( v7,  v8);
+  constexpr Score Hanging             = S( v9, v10);
+  constexpr Score KnightOnQueen       = S(v11, v12);
+  constexpr Score LongDiagonalBishop  = S(v13, v14);
+  constexpr Score MinorBehindPawn     = S(v15, v16);
+  constexpr Score PassedFile          = S(v17, v18);
+  constexpr Score PawnlessFlank       = S(v19, v20);
+  constexpr Score ReachableOutpost    = S(v21, v22);
+  constexpr Score RestrictedPiece     = S(v23, v24);
+  constexpr Score RookOnKingRing      = S(v25, v26);
+  constexpr Score SliderOnQueen       = S(v27, v28);
+  constexpr Score ThreatByKing        = S(v29, v30);
+  constexpr Score ThreatByPawnPush    = S(v31, v32);
+  constexpr Score ThreatBySafePawn    = S(v33, v34);
+  constexpr Score TrappedRook         = S(v35, v36);
+  constexpr Score WeakQueenProtection = S(v37, v38);
+  constexpr Score WeakQueen           = S(v39, v40);
 
 
 #undef S
