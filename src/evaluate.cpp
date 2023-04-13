@@ -58,6 +58,8 @@ using namespace std;
 
 namespace Stockfish {
 
+int v1 = 1001, v2 = 1, v3 = 406, v4 = 424, v5 = 272, v6 = 748, v7 = 200, v8 = 214;
+TUNE(v1, v2, v3, v4, v5, v6, v7, v8);
 namespace Eval {
 
   bool useNNUE;
@@ -1063,7 +1065,7 @@ Value Eval::evaluate(const Position& pos, int* complexity) {
   else
   {
       int nnueComplexity;
-      int scale = 1001 + pos.non_pawn_material() / 64;
+      int scale = v1 + v2 * pos.non_pawn_material() / 64;
 
       Color stm = pos.side_to_move();
       Value optimism = pos.this_thread()->optimism[stm];
@@ -1071,20 +1073,20 @@ Value Eval::evaluate(const Position& pos, int* complexity) {
       Value nnue = NNUE::evaluate(pos, true, &nnueComplexity);
 
       // Blend nnue complexity with (semi)classical complexity
-      nnueComplexity = (  406 * nnueComplexity
-                        + (424 + optimism) * abs(psq - nnue)
+      nnueComplexity = (  v3 * nnueComplexity
+                        + (v4 + optimism) * abs(psq - nnue)
                         ) / 1024;
 
       // Return hybrid NNUE complexity to caller
       if (complexity)
           *complexity = nnueComplexity;
 
-      optimism = optimism * (272 + nnueComplexity) / 256;
-      v = (nnue * scale + optimism * (scale - 748)) / 1024;
+      optimism = optimism * (v5 + nnueComplexity) / 256;
+      v = (nnue * scale + optimism * (scale - v6)) / 1024;
   }
 
   // Damp down the evaluation linearly when shuffling
-  v = v * (200 - pos.rule50_count()) / 214;
+  v = v * (v7 - pos.rule50_count()) / v8;
 
   // Guarantee evaluation does not hit the tablebase range
   v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
