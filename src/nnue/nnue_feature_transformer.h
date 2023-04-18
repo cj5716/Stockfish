@@ -25,6 +25,7 @@
 #include "nnue_architecture.h"
 
 #include <cstring> // std::memset()
+#include <math.h>  // std::sqrt()
 #include <utility> // std::pair
 
 namespace Stockfish::Eval::NNUE {
@@ -203,7 +204,7 @@ namespace Stockfish::Eval::NNUE {
             return ideal;
 
           int res = 1;
-          int isq = sqrt(ideal);
+          int isq = std::sqrt(ideal);
           // Look for the largest divisor of the ideal register count that is smaller than MaxRegisters
           for (int divisor = 2; divisor <= isq; ++divisor) {
             if (ideal % divisor == 0) {
