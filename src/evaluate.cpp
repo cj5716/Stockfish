@@ -1062,7 +1062,7 @@ Value Eval::evaluate(const Position& pos) {
   else
   {
       int nnueComplexity;
-      int scale = 989 + pos.non_pawn_material() / 64;
+      int scale = 995 + pos.non_pawn_material() / 64;
 
       Color stm = pos.side_to_move();
       Value optimism = pos.this_thread()->optimism[stm];
@@ -1070,16 +1070,16 @@ Value Eval::evaluate(const Position& pos) {
       Value nnue = NNUE::evaluate(pos, true, &nnueComplexity);
 
       // Blend nnue complexity with (semi)classical complexity
-      nnueComplexity = (  377 * nnueComplexity
-                        + (401 + optimism) * abs(psq - nnue)
+      nnueComplexity = (  392 * nnueComplexity
+                        + (413 + optimism) * abs(psq - nnue)
                         ) / 1024;
 
-      optimism = optimism * (260 + nnueComplexity) / 256;
-      v = (nnue * scale + optimism * (scale - 741)) / 1024;
+      optimism = optimism * (266 + nnueComplexity) / 256;
+      v = (nnue * scale + optimism * (scale - 745)) / 1024;
   }
 
   // Damp down the evaluation linearly when shuffling
-  v = v * (196 - pos.rule50_count()) / 209;
+  v = v * (198 - pos.rule50_count()) / 212;
 
   // Guarantee evaluation does not hit the tablebase range
   v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
