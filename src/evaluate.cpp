@@ -57,7 +57,7 @@
 using namespace std;
 
 namespace Stockfish {
-int nnth = 2200;
+int nnth = 2178;
 TUNE(nnth);
 namespace Eval {
 
