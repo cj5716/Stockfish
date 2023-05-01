@@ -1139,10 +1139,13 @@ moves_loop: // When in check, search starts here
       // Step 16. Make the move
       pos.do_move(move, st, givesCheck);
 
+
+      if (likelyFailLow)
+          r += (capture && type_of(movedPiece) == PAWN);
+
       // Decrease reduction if position is or has been on the PV
       // and node is not likely to fail low. (~3 Elo)
-      if (   ss->ttPv
-          && !likelyFailLow)
+      else if (ss->ttPv)
           r -= 2;
 
       // Decrease reduction if opponent's move count is high (~1 Elo)
