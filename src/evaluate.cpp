@@ -58,6 +58,9 @@ using namespace std;
 
 namespace Stockfish {
 
+int v1 = 0, v2 = 0, v3 = 0, v4 = 0, v5 = 24;
+TUNE(SetRange(-100,100),v1,v2,v3,v4,v5);
+
 namespace Eval {
 
   bool useNNUE;
@@ -1067,8 +1070,9 @@ Value Eval::evaluate(const Position& pos) {
 
       Color stm = pos.side_to_move();
       Value optimism = pos.this_thread()->optimism[stm];
+      int delta = (v1 * pos.non_pawn_material() + v2 * pos.count<PAWN>() + v3 * optimism - v4 * abs(psq)) / 4096 + v5;
 
-      Value nnue = NNUE::evaluate(pos, true, &nnueComplexity);
+      Value nnue = NNUE::evaluate(pos, delta, &nnueComplexity);
 
       // Blend nnue complexity with (semi)classical complexity
       nnueComplexity = (  402 * nnueComplexity
@@ -1144,7 +1148,7 @@ std::string Eval::trace(Position& pos) {
   ss << "\nClassical evaluation   " << to_cp(v) << " (white side)\n";
   if (Eval::useNNUE)
   {
-      v = NNUE::evaluate(pos, false);
+      v = NNUE::evaluate(pos, 0);
       v = pos.side_to_move() == WHITE ? v : -v;
       ss << "NNUE evaluation        " << to_cp(v) << " (white side)\n";
   }
