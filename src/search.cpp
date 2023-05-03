@@ -1159,7 +1159,7 @@ moves_loop: // When in check, search starts here
           r -= 1 + 12 / (3 + depth);
 
       else if (more_than_one(pos.checkers()))
-          r++;
+          r--;
 
       // Increase reduction if ttMove is a capture (~3 Elo)
       if (ttCapture)
