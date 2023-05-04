@@ -58,9 +58,6 @@ using namespace std;
 
 namespace Stockfish {
 
-int v1 = 0, v2 = 0, v3 = 0, v4 = 0, v5 = 24;
-TUNE(SetRange(-100,100),v1,v2,v3,v4,v5);
-
 namespace Eval {
 
   bool useNNUE;
@@ -1070,7 +1067,7 @@ Value Eval::evaluate(const Position& pos) {
 
       Color stm = pos.side_to_move();
       Value optimism = pos.this_thread()->optimism[stm];
-      int delta = (v1 * pos.non_pawn_material() + v2 * pos.count<PAWN>() + v3 * optimism - v4 * abs(psq)) / 4096 + v5;
+      int delta = (7 * pos.count<PAWN>() + 4 * optimism - 2 * abs(psq) - pos.non_pawn_material()) / 4096 + 15;
 
       Value nnue = NNUE::evaluate(pos, delta, &nnueComplexity);
 
