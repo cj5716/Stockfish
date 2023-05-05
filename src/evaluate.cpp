@@ -1067,7 +1067,7 @@ Value Eval::evaluate(const Position& pos) {
 
       Color stm = pos.side_to_move();
       Value optimism = pos.this_thread()->optimism[stm];
-      int delta = (7 * pos.count<PAWN>() + 4 * optimism - 2 * abs(psq) - pos.non_pawn_material()) / 4096 + 15;
+      int delta = 15 - (2 * abs(psq) + pos.non_pawn_material() - 7 * pos.count<PAWN>()) / 4096;
 
       Value nnue = NNUE::evaluate(pos, delta, &nnueComplexity);
 
