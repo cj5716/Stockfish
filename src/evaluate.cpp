@@ -57,7 +57,9 @@
 using namespace std;
 
 namespace Stockfish {
-
+int LT1 = 3622, LT2 = 1962, s1 = 967, s2 = 32, s3 = 0;
+TUNE(LT1,LT2, s1, s2);
+TUNE(SetRange(-100,100),s3);
 namespace Eval {
 
   bool useNNUE;
@@ -191,8 +193,8 @@ using namespace Trace;
 namespace {
 
   // Threshold for lazy and space evaluation
-  constexpr Value LazyThreshold1    =  Value(3622);
-  constexpr Value LazyThreshold2    =  Value(1962);
+  Value LazyThreshold1    =  Value(LT1);
+  Value LazyThreshold2    =  Value(LT2);
   constexpr Value SpaceThreshold    =  Value(11551);
 
   // KingAttackWeights[PieceType] contains king attack weights by piece type
@@ -1063,7 +1065,7 @@ Value Eval::evaluate(const Position& pos) {
   else
   {
       int nnueComplexity;
-      int scale = 967 + pos.non_pawn_material() / 64;
+      int scale = s1 + (s2 * pos.non_pawn_material() + s3 * pos.count<PAWN>()) / 2048;
 
       Color stm = pos.side_to_move();
       Value optimism = pos.this_thread()->optimism[stm];
