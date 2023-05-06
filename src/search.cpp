@@ -1114,7 +1114,8 @@ moves_loop: // When in check, search starts here
                       (ss+1)->cutoffCnt > 3,
                       (ss-1)->currentMove == MOVE_NULL,
                       likelyFailLow,
-                      ttCapture
+                      ttCapture,
+                      move == ttMove
                   };
 
                   #define R(x, c) ((x) >= 50 ? (c) : (x) <= -50 ? (-(c)) : 0)
@@ -1130,14 +1131,16 @@ moves_loop: // When in check, search starts here
                   else if (ttValue <= alpha)
                       extension = -1;
 
+                  int ext = 0;
                   for(int i = 0; i < N; ++i)
                       for(int j = i + 1; j < N; ++j)
                       {
-                          extension += R(A[i][j][0],  C[i] &&  C[j]);
-                          extension += R(A[i][j][1],  C[i] && !C[j]);
-                          extension += R(A[i][j][2], !C[i] &&  C[j]);
-                          extension += R(A[i][j][3], !C[i] && !C[j]);
+                          ext += R(A[i][j][0],  C[i] &&  C[j]);
+                          ext += R(A[i][j][1],  C[i] && !C[j]);
+                          ext += R(A[i][j][2], !C[i] &&  C[j]);
+                          ext += R(A[i][j][3], !C[i] && !C[j]);
                       }
+                  extension += std::clamp(ext, -1, 1);
               }
           }
 
