@@ -38,6 +38,12 @@
 
 namespace Stockfish {
 
+const int N = 13;
+
+int A[N][N][4];
+
+TUNE(SetRange(-100, 100), A);
+
 namespace Search {
 
   LimitsType Limits;
@@ -1095,17 +1101,44 @@ moves_loop: // When in check, search starts here
               else if (singularBeta >= beta)
                   return singularBeta;
 
-              // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
-              else if (ttValue >= beta)
-                  extension = -2 - !PvNode;
+              else {
+                  bool C[N] = {
+                      PvNode,
+                      cutNode,
+                      capture,
+                      improving,
+                      ss->inCheck,
+                      givesCheck,
+                      priorCapture,
+                      (ss-1)->moveCount > 7,
+                      (ss+1)->cutoffCnt > 3,
+                      (ss-1)->currentMove == MOVE_NULL,
+                      likelyFailLow,
+                      ttCapture
+                  };
 
-              // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= value)
-                  extension = -1;
+                  #define R(x, c) ((x) >= 50 ? (c) : (x) <= -50 ? (-(c)) : 0)
+                  // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
+                  if (ttValue >= beta)
+                      extension = -2 - !PvNode;
 
-              // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= alpha)
-                  extension = -1;
+                  // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
+                  else if (ttValue <= value)
+                      extension = -1;
+
+                  // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
+                  else if (ttValue <= alpha)
+                      extension = -1;
+
+                  for(int i = 0; i < N; ++i)
+                      for(int j = i + 1; j < N; ++j)
+                      {
+                          extension += R(A[i][j][0],  C[i] &&  C[j]);
+                          extension += R(A[i][j][1],  C[i] && !C[j]);
+                          extension += R(A[i][j][2], !C[i] &&  C[j]);
+                          extension += R(A[i][j][3], !C[i] && !C[j]);
+                      }
+              }
           }
 
           // Check extensions (~1 Elo)
