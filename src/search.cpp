@@ -1105,8 +1105,8 @@ moves_loop: // When in check, search starts here
                   else if (ttValue <= alpha)
                       extension = -1;
 
-                  if (!ss->inCheck && (ss+1)->cutoffCnt > 3)
-                      extension--;
+                  if ((ss-1)->currentMove == MOVE_NULL && capture)
+                      extension++;
               }
           }
 
