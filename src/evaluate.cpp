@@ -191,8 +191,8 @@ using namespace Trace;
 namespace {
 
   // Threshold for lazy and space evaluation
-  constexpr Value LazyThreshold1    =  Value(3691);
-  constexpr Value LazyThreshold2    =  Value(1935);
+  constexpr Value LazyThreshold1    =  Value(3714);
+  constexpr Value LazyThreshold2    =  Value(1832);
   constexpr Value SpaceThreshold    =  Value(11551);
 
   // KingAttackWeights[PieceType] contains king attack weights by piece type
@@ -1063,7 +1063,7 @@ Value Eval::evaluate(const Position& pos) {
   else
   {
       int nnueComplexity;
-      int scale = 961 + (31 * pos.non_pawn_material() + 2 * pos.count<PAWN>()) / 2048;
+      int scale = 959 + 31 * pos.non_pawn_material() / 2048;
 
       Color stm = pos.side_to_move();
       Value optimism = pos.this_thread()->optimism[stm];
