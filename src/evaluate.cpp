@@ -1067,8 +1067,9 @@ Value Eval::evaluate(const Position& pos) {
 
       Color stm = pos.side_to_move();
       Value optimism = pos.this_thread()->optimism[stm];
+      int delta = 15 - (2 * abs(psq) + pos.non_pawn_material() - 7 * pos.count<PAWN>()) / 4096;
 
-      Value nnue = NNUE::evaluate(pos, true, &nnueComplexity);
+      Value nnue = NNUE::evaluate(pos, delta, &nnueComplexity);
 
       // Blend nnue complexity with (semi)classical complexity
       nnueComplexity = (  402 * nnueComplexity
@@ -1144,7 +1145,7 @@ std::string Eval::trace(Position& pos) {
   ss << "\nClassical evaluation   " << to_cp(v) << " (white side)\n";
   if (Eval::useNNUE)
   {
-      v = NNUE::evaluate(pos, false);
+      v = NNUE::evaluate(pos, 0);
       v = pos.side_to_move() == WHITE ? v : -v;
       ss << "NNUE evaluation        " << to_cp(v) << " (white side)\n";
   }
