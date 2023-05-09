@@ -1094,15 +1094,24 @@ moves_loop: // When in check, search starts here
 
               // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
               else if (ttValue >= beta)
-                  extension = -2 - !PvNode;
+                  extension = (PvNode ? -2 : -3)
+                            - (capture && (ss+1)->cutoffCnt <= 3 ? 0 : 0)
+                            - (cutNode ? 0 : 0)
+                            + ((ss-1)->currentMove == MOVE_NULL && capture ? 0 : 0);
 
               // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= value)
-                  extension = -1;
+                  extension = (PvNode ? -1 : -1)
+                            - (capture && (ss+1)->cutoffCnt <= 3 ? 0 : 0)
+                            - (cutNode ? 0 : 0)
+                            + ((ss-1)->currentMove == MOVE_NULL && capture ? 0 : 0);
 
               // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= alpha)
-                  extension = -1;
+                  extension = (PvNode ? -1 : -1)
+                            - (capture && (ss+1)->cutoffCnt <= 3 ? 0 : 0)
+                            - (cutNode ? 0 : 0)
+                            + ((ss-1)->currentMove == MOVE_NULL && capture ? 0 : 0);
           }
 
           // Check extensions (~1 Elo)
