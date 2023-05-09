@@ -37,7 +37,10 @@
 #include "nnue/evaluate_nnue.h"
 
 namespace Stockfish {
-
+int b1 = -2, b2 = -3, b3 = 0, b4 = 0, b5 = 0, b6 = 0, b7 = 0, b8 = 0,
+    v1 = -1, v2 = -1, v3 = 0, v4 = 0, v5 = 0, v6 = 0, v7 = 0, v8 = 0,
+    a1 = -1, a2 = -1, a3 = 0, a4 = 0, a5 = 0, a6 = 0, a7 = 0, a8 = 0;
+TUNE(SetRange(-10,10),b1,b2,b3,b4,b5,b6,b7,b8,v1,v2,v3,v4,v5,v6,v7,v8,a1,a2,a3,a4,a5,a6,a7,a8);
 namespace Search {
 
   LimitsType Limits;
@@ -1094,24 +1097,24 @@ moves_loop: // When in check, search starts here
 
               // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
               else if (ttValue >= beta)
-                  extension = (PvNode ? -2 : -3)
-                            - (capture && (ss+1)->cutoffCnt <= 3 ? 0 : 0)
-                            - (cutNode ? 0 : 0)
-                            + ((ss-1)->currentMove == MOVE_NULL && capture ? 0 : 0);
+                  extension = (PvNode ? b1 : b2)
+                            - (capture && (ss+1)->cutoffCnt <= 3 ? b3 : b4)
+                            - (cutNode ? b5 : b6)
+                            + ((ss-1)->currentMove == MOVE_NULL && capture ? b7 : b8);
 
               // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= value)
-                  extension = (PvNode ? -1 : -1)
-                            - (capture && (ss+1)->cutoffCnt <= 3 ? 0 : 0)
-                            - (cutNode ? 0 : 0)
-                            + ((ss-1)->currentMove == MOVE_NULL && capture ? 0 : 0);
+                  extension = (PvNode ? v1 : v2)
+                            - (capture && (ss+1)->cutoffCnt <= 3 ? v3 : v4)
+                            - (cutNode ? v5 : v6)
+                            + ((ss-1)->currentMove == MOVE_NULL && capture ? v7 : v8);
 
               // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= alpha)
-                  extension = (PvNode ? -1 : -1)
-                            - (capture && (ss+1)->cutoffCnt <= 3 ? 0 : 0)
-                            - (cutNode ? 0 : 0)
-                            + ((ss-1)->currentMove == MOVE_NULL && capture ? 0 : 0);
+                  extension = (PvNode ? a1 : a2)
+                            - (capture && (ss+1)->cutoffCnt <= 3 ? a3 : a4)
+                            - (cutNode ? a5 : a6)
+                            + ((ss-1)->currentMove == MOVE_NULL && capture ? a7 : a8);
           }
 
           // Check extensions (~1 Elo)
