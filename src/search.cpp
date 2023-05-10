@@ -1098,7 +1098,7 @@ moves_loop: // When in check, search starts here
 
               // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= value)
-                  extension = -!PvNode - - !(capture && (ss+1)->cutoffCnt <= 3);
+                  extension = -!PvNode - !(capture && (ss+1)->cutoffCnt <= 3);
 
               // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= alpha)
