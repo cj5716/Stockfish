@@ -1573,7 +1573,7 @@ moves_loop: // When in check, search starts here
 
       // Do not search moves with bad enough SEE values (~5 Elo)
 	  // Give more leeway on PV nodes
-      if (!pos.see_ge(move, Value(-105 - 10 * PvNode)))
+      if (!pos.see_ge(move, Value(-80 - 30 * PvNode)))
           continue;
     }
 
