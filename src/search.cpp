@@ -37,7 +37,7 @@
 #include "nnue/evaluate_nnue.h"
 
 namespace Stockfish {
-int v1 = -80, v2 = 30;
+int v1 = -91, v2 = 47;
 TUNE(v1, v2);
 namespace Search {
 
