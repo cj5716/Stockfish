@@ -1572,7 +1572,7 @@ moves_loop: // When in check, search starts here
           continue;
 
       // Do not search moves with bad enough SEE values (~5 Elo)
-      if (!pos.see_ge(move, Value(-110)))
+      if (!pos.see_ge(move, Value(-(PvNode ? (1709 + 75 * depth) : (1782 + 16 * depth)) / 16)))
           continue;
     }
 
