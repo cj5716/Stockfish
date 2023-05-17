@@ -37,9 +37,11 @@
 #include "nnue/evaluate_nnue.h"
 
 namespace Stockfish {
-int v1 = 110, v2 = 0, v3 = 0;
+int v1 = -1760, v2 = 0, v3 = -1760, v4 = 0;
 TUNE(v1);
-TUNE(SetRange(-100,100),v2,v3);
+TUNE(SetRange(-1600,1600),v2);
+TUNE(v3);
+TUNE(SetRange(-1600,1600),v4);
 namespace Search {
 
   LimitsType Limits;
@@ -1574,7 +1576,7 @@ moves_loop: // When in check, search starts here
           continue;
 
       // Do not search moves with bad enough SEE values (~5 Elo)
-      if (!pos.see_ge(move, Value(-v1 + depth * (v2 + v3 * PvNode))))
+      if (!pos.see_ge(move, Value((PvNode ? (v1 + v2 * depth) : (v3 + v4 * depth)) / 16)))
           continue;
     }
 
