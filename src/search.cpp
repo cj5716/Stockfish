@@ -1148,16 +1148,21 @@ moves_loop: // When in check, search starts here
           r--;
 
       // Increase reduction for cut nodes (~3 Elo)
+	  // Less reduction if position is in TT, and more reduction if position is in TT. (~0.5 Elo)
       if (cutNode)
-          r += 2;
+          r += ttMove ? 1 : 3;
+	  
+      // Decrease reduction for PvNodes based on depth (~2 Elo)
+      else if (PvNode)
+          r -= 1 + 12 / (3 + depth);
+	  
+	  // Increase reduction for Non PV and Non cutNodes if position is not in TT.
+	  else if (!ttMove)
+		  r++;
 
       // Increase reduction if ttMove is a capture (~3 Elo)
       if (ttCapture)
           r++;
-
-      // Decrease reduction for PvNodes based on depth (~2 Elo)
-      if (PvNode)
-          r -= 1 + 12 / (3 + depth);
 
       // Decrease reduction if ttMove has been singularly extended (~1 Elo)
       if (singularQuietLMR)
