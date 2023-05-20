@@ -37,7 +37,12 @@
 #include "nnue/evaluate_nnue.h"
 
 namespace Stockfish {
-
+int v1 = 99, v2 = 0, v3 = 0, v4 = 0, v5 = 65,
+    b1 = 0, b2 = 0, b3 = 0, b4 = 0;
+TUNE(SetRange(49,149), v1);
+TUNE(SetRange(-64, 64), v2, v3, v4);
+TUNE(SetRange(15, 115), v5);
+TUNE(SetRange(-64, 64), b1, b2, b3, b4);
 namespace Search {
 
   LimitsType Limits;
@@ -1062,21 +1067,25 @@ moves_loop: // When in check, search starts here
               && (tte->bound() & BOUND_LOWER)
               &&  tte->depth() >= depth - 3)
           {
-              Value singularBeta = ttValue - (99 + 65 * (ss->ttPv && !PvNode)) * depth / 64;
+              Value singularBeta = ttValue * 64 - (v1 + (PvNode ? v2 : v3) + v4 * cutNode + v5 * (ss->ttPv && !PvNode)) * depth;
+              Value sB1 = (singularBeta + b1) / 64;
+              Value sB2 = (singularBeta + b2) / 64;
+              Value sB3 = (singularBeta + b3) / 64;
+              Value sB4 = (singularBeta + b4) / 64;
               Depth singularDepth = (depth - 1) / 2;
 
               ss->excludedMove = move;
-              value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
+              value = search<NonPV>(pos, ss, sB1 - 1, sB1, singularDepth, cutNode);
               ss->excludedMove = MOVE_NONE;
 
-              if (value < singularBeta)
+              if (value < sB2)
               {
                   extension = 1;
                   singularQuietLMR = !ttCapture;
 
                   // Avoid search explosion by limiting the number of double extensions
                   if (  !PvNode
-                      && value < singularBeta - 22
+                      && value < sB3 - 22
                       && ss->doubleExtensions <= 11)
                   {
                       extension = 2;
@@ -1089,8 +1098,8 @@ moves_loop: // When in check, search starts here
               // search without the ttMove. So we assume this expected Cut-node is not singular,
               // that multiple moves fail high, and we can prune the whole subtree by returning
               // a soft bound.
-              else if (singularBeta >= beta)
-                  return singularBeta;
+              else if (sB4 >= beta)
+                  return sB4;
 
               // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
               else if (ttValue >= beta)
