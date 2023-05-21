@@ -1060,25 +1060,21 @@ moves_loop: // When in check, search starts here
               && (tte->bound() & BOUND_LOWER)
               &&  tte->depth() >= depth - 3)
           {
-              Value singularBeta = 64 * ttValue - (100 + (PvNode ? 1 : -4 - 3 * cutNode + 63 * ss->ttPv)) * depth;
-			  Value sB1 = (singularBeta - 3) / 64;
-			  Value sB2 = (singularBeta + 4) / 64;
-			  Value sB3 = (singularBeta - 2) / 64;
-			  Value sB4 = (singularBeta - 1) / 64;
+              Value singularBeta = (64 * ttValue - (100 + (PvNode ? 1 : -4 - 3 * cutNode + 63 * ss->ttPv)) * depth) / 64;
               Depth singularDepth = (depth - 1) / 2;
 
               ss->excludedMove = move;
-              value = search<NonPV>(pos, ss, sB1 - 1, sB1, singularDepth, cutNode);
+              value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
               ss->excludedMove = MOVE_NONE;
 
-              if (value < sB2)
+              if (value < singularBeta)
               {
                   extension = 1;
                   singularQuietLMR = !ttCapture;
 
                   // Avoid search explosion by limiting the number of double extensions
                   if (  !PvNode
-                      && value < sB3 - 22
+                      && value < singularBeta - 22
                       && ss->doubleExtensions <= 11)
                   {
                       extension = 2;
@@ -1091,8 +1087,8 @@ moves_loop: // When in check, search starts here
               // search without the ttMove. So we assume this expected Cut-node is not singular,
               // that multiple moves fail high, and we can prune the whole subtree by returning
               // a soft bound.
-              else if (sB4 >= beta)
-                  return sB4;
+              else if (singularBeta >= beta)
+                  return singularBeta;
 
               // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
               else if (ttValue >= beta)
