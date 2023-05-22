@@ -216,7 +216,7 @@ namespace Stockfish::Eval::NNUE {
               if (ideal / divisor <= MaxRegisters)
                 return ideal / divisor;
 
-              else if (maxisq)
+              else if (maxisq && divisor <= MaxRegisters)
                 res = divisor;
             }
           }
