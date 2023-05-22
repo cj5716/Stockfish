@@ -1149,13 +1149,13 @@ moves_loop: // When in check, search starts here
       if (cutNode)
           r += 2;
 
+      // Decrease reduction for PvNodes based on depth (~2 Elo)
+      else if (PvNode)
+          r -= 1 + 11 / (3 + depth);
+
       // Increase reduction if ttMove is a capture (~3 Elo)
       if (ttCapture)
           r++;
-
-      // Decrease reduction for PvNodes based on depth (~2 Elo)
-      if (PvNode)
-          r -= 1 + 11 / (3 + depth);
 
       // Decrease reduction if ttMove has been singularly extended (~1 Elo)
       if (singularQuietLMR)
@@ -1209,9 +1209,9 @@ moves_loop: // When in check, search starts here
 
               if (newDepth > d)
                   value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth, !cutNode);
-
-              int bonus = value <= alpha ? -stat_bonus(newDepth)
-                        : value >= beta  ?  stat_bonus(newDepth)
+			  
+              int bonus = value >= beta  ?  stat_bonus(newDepth)
+                        : value <= alpha ? -stat_bonus(newDepth)
                                          :  0;
 
               update_continuation_histories(ss, movedPiece, to_sq(move), bonus);
