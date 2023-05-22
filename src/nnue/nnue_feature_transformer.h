@@ -204,10 +204,11 @@ namespace Stockfish::Eval::NNUE {
 
           int res = 1;
           // faster version of sqrt
-          __m128 xmm0 = _mm_setzero_ps();
-          xmm0 = _mm_cvt_si2ss(xmm0, ideal);
-          xmm0 = _mm_rsqrt_ps(xmm0);
-          int isq = _mm_cvtt_ss2si(xmm0);
+          __m128 sqrt = _mm_setzero_ps();
+          sqrt = _mm_cvt_si2ss(sqrt, ideal);
+          sqrt = _mm_rsqrt_ps(sqrt);
+          int isq = _mm_cvtt_ss2si(sqrt);
+		  const bool maxisq = MaxRegisters < isq;
           // Look for the largest divisor of the ideal register count that is smaller than MaxRegisters
           for (int divisor = 2; divisor <= isq; ++divisor) {
             if (ideal % divisor == 0) {
@@ -215,7 +216,7 @@ namespace Stockfish::Eval::NNUE {
               if (ideal / divisor <= MaxRegisters)
                 return ideal / divisor;
 
-              else if (divisor <= MaxRegisters)
+              else if (maxisq)
                 res = divisor;
             }
           }
