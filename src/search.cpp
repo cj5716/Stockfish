@@ -1018,8 +1018,8 @@ moves_loop: // When in check, search starts here
                             + (*contHist[3])[movedPiece][to_sq(move)];
 
               // Continuation history based pruning (~2 Elo)
-              if (   lmrDepth < 6
-                  && history < -3792 * depth)
+              if (   history < -3792 * depth
+                  && lmrDepth < 6)
                   continue;
 
               history += 2 * thisThread->mainHistory[us][from_to(move)];
@@ -1072,8 +1072,8 @@ moves_loop: // When in check, search starts here
                   singularQuietLMR = !ttCapture;
 
                   // Avoid search explosion by limiting the number of double extensions
-                  if (  !PvNode
-                      && value < singularBeta - 22
+                  if (   value < singularBeta - 22  
+                      && !PvNode
                       && ss->doubleExtensions <= 11)
                   {
                       extension = 2;
@@ -1094,11 +1094,11 @@ moves_loop: // When in check, search starts here
                   extension = -2 - !PvNode;
 
               // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= value)
+              else if (ttValue <= alpha)
                   extension = -1;
 
               // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= alpha)
+              else if (ttValue <= value)
                   extension = -1;
           }
 
@@ -1209,8 +1209,8 @@ moves_loop: // When in check, search starts here
               if (newDepth > d)
                   value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth, !cutNode);
 			  
-              int bonus = value >= beta  ?  stat_bonus(newDepth)
-                        : value <= alpha ? -stat_bonus(newDepth)
+              int bonus = value <= alpha ? -stat_bonus(newDepth)
+                        : value >= beta  ?  stat_bonus(newDepth)
                                          :  0;
 
               update_continuation_histories(ss, movedPiece, to_sq(move), bonus);
@@ -1221,7 +1221,7 @@ moves_loop: // When in check, search starts here
       else if (!PvNode || moveCount > 1)
       {
           // Increase reduction for cut nodes and not ttMove (~1 Elo)
-          if (!ttMove && cutNode)
+          if (cutNode && !ttMove)
               r += 2;
 
           value = -search<NonPV>(pos, ss+1, -(alpha+1), -alpha, newDepth - (r > 3), !cutNode);
