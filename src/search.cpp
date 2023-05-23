@@ -545,7 +545,7 @@ namespace {
     Move ttMove, move, excludedMove, bestMove;
     Depth extension, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
-    bool givesCheck, improving, priorCapture, singularQuietLMR;
+    bool givesCheck, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
     int moveCount, captureCount, quietCount, improvement;
@@ -708,7 +708,7 @@ namespace {
     {
         // Skip early pruning when in check
         ss->staticEval = eval = VALUE_NONE;
-        improving = false;
+        ss->improving = false;
         improvement = 0;
         goto moves_loop;
     }
@@ -753,7 +753,7 @@ namespace {
     improvement =   (ss-2)->staticEval != VALUE_NONE ? ss->staticEval - (ss-2)->staticEval
                   : (ss-4)->staticEval != VALUE_NONE ? ss->staticEval - (ss-4)->staticEval
                   :                                    163;
-    improving = improvement > 0;
+    ss->improving = improvement > 0;
 
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
@@ -769,7 +769,7 @@ namespace {
     // The depth condition is important for mate finding.
     if (   !ss->ttPv
         &&  depth < 9
-        &&  eval - futility_margin(depth, improving) - (ss-1)->statScore / 306 >= beta
+        &&  eval - futility_margin(depth, ss->improving) - (ss-1)->statScore / 306 >= beta
         &&  eval >= beta
         &&  eval < 22761) // larger than VALUE_KNOWN_WIN, but smaller than TB wins
         return eval;
@@ -823,7 +823,7 @@ namespace {
         }
     }
 
-    probCutBeta = beta + 174 - 60 * improving;
+    probCutBeta = beta + 174 - 60 * ss->improving;
 
     // Step 10. ProbCut (~10 Elo)
     // If we have a good enough capture (or queen promotion) and a reduced search returns a value
@@ -894,7 +894,7 @@ namespace {
 moves_loop: // When in check, search starts here
 
     // Step 12. A small Probcut idea, when we are in check (~4 Elo)
-    probCutBeta = beta + 430;
+    probCutBeta = beta + 380 + 100 * (ss-1)->improving;
     if (   ss->inCheck
         && !PvNode
         && depth >= 2
@@ -968,7 +968,7 @@ moves_loop: // When in check, search starts here
 
       Value delta = beta - alpha;
 
-      Depth r = reduction(improving, depth, moveCount, delta, thisThread->rootDelta);
+      Depth r = reduction(ss->improving, depth, moveCount, delta, thisThread->rootDelta);
 
       // Step 14. Pruning at shallow depth (~120 Elo). Depth conditions are important for mate finding.
       if (  !rootNode
@@ -976,7 +976,7 @@ moves_loop: // When in check, search starts here
           && bestValue > VALUE_TB_LOSS_IN_MAX_PLY)
       {
           // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
-          moveCountPruning = moveCount >= futility_move_count(improving, depth);
+          moveCountPruning = moveCount >= futility_move_count(ss->improving, depth);
 
           // Reduced depth of the next LMR search
           int lmrDepth = newDepth - r;
