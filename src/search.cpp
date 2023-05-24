@@ -37,6 +37,28 @@
 #include "nnue/evaluate_nnue.h"
 
 namespace Stockfish {
+int s1 = 100, s2 = 2, s3 = -2, s4 = -3, s5 = 63,
+    c1 = -3, c2 = 2, c3 = -2, c4 = 0,
+	i1 = 256, i2 = 256,
+	fm1 = 148, fm2 = 1, fm3 = 0, fm4 = 0,
+	fmc1 = 1024, fmc2 = 1024, fmc3 = 512, fmc4 = 512,
+	pc1 = 174, pc2 = 60, pc3 = 0, pc4 = 0,
+    b1 = -2, b2 = -3, b3 = 0, b4 = 0, b5 = 0, b6 = 0, b7 = 0, b8 = 0, b9 = 0, b10 = 0,
+    v1 = -1, v2 = -1, v3 = 0, v4 = 0, v5 = 0, v6 = 0, v7 = 0, v8 = 0, v9 = 0, v10 = 0,
+    a1 = -1, a2 = -1, a3 = 0, a4 = 0, a5 = 0, a6 = 0, a7 = 0, a8 = 0, a9 = 0, a10 = 0,
+	imp = 0;
+TUNE(SetRange(50,150), s1);
+TUNE(SetRange(-64, 64), s2, s3, s4);
+TUNE(SetRange(15, 115), s5);
+TUNE(SetRange(-64, 64), c1, c2, c3, c4);
+TUNE(i1, i2);
+TUNE(fm1);
+TUNE(SetRange(-10,10), fm2, fm3, fm4);
+TUNE(fmc1, fmc2, fmc3, fmc4);
+TUNE(pc1, pc2);
+TUNE(SetRange(-200,200),pc3, pc4);
+TUNE(SetRange(-10,10),b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10);
+TUNE(SetRange(-100,100), imp);
 
 namespace Search {
 
@@ -63,8 +85,8 @@ namespace {
   enum NodeType { NonPV, PV, Root };
 
   // Futility margin
-  Value futility_margin(Depth d, bool improving) {
-    return Value(148 * (d - improving));
+  Value futility_margin(Depth d, bool improving, bool moreImproving, bool worsening) {
+    return Value(fm1 * (d - fm2 * improving - fm3 * moreImproving + fm4 * worsening));
   }
 
   // Reductions lookup table, initialized at startup
@@ -75,9 +97,11 @@ namespace {
     return (r + 1356 - int(delta) * 983 / int(rootDelta)) / 1024 + (!i && r > 901);
   }
 
-  constexpr int futility_move_count(bool improving, Depth depth) {
-    return improving ? (3 + depth * depth)
-                     : (3 + depth * depth) / 2;
+  int futility_move_count(bool improving, bool moreImproving, bool worsening, Depth depth) {
+    return moreImproving ? (3 + depth * depth) * fmc1 / 1024 : 
+	           improving ? (3 + depth * depth) * fmc2 / 1024 : 
+               worsening ? (3 + depth * depth) * fmc3 / 1024 :
+			               (3 + depth * depth) * fmc4 / 1024;
   }
 
   // History and stats update bonus, based on depth
@@ -545,7 +569,8 @@ namespace {
     Move ttMove, move, excludedMove, bestMove;
     Depth extension, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
-    bool givesCheck, improving, priorCapture, singularQuietLMR;
+    bool givesCheck, improving, moreImproving, worsening, priorCapture, singularQuietLMR;
+	#define C(x) (x >= 33 ? moreImproving : x <= -33 ? !worsening : improving)
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
     int moveCount, captureCount, quietCount, improvement;
@@ -707,7 +732,7 @@ namespace {
     {
         // Skip early pruning when in check
         ss->staticEval = eval = VALUE_NONE;
-        improving = false;
+        improving = moreImproving = worsening = false;
         improvement = 0;
         goto moves_loop;
     }
@@ -753,6 +778,8 @@ namespace {
                   : (ss-4)->staticEval != VALUE_NONE ? ss->staticEval - (ss-4)->staticEval
                   :                                    163;
     improving = improvement > 0;
+	moreImproving = improvement > i1;
+	worsening = improvement < -i2;
 
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
@@ -768,7 +795,7 @@ namespace {
     // The depth condition is important for mate finding.
     if (   !ss->ttPv
         &&  depth < 9
-        &&  eval - futility_margin(depth, improving) - (ss-1)->statScore / 306 >= beta
+        &&  eval - futility_margin(depth, improving, moreImproving, worsening) - (ss-1)->statScore / 306 >= beta
         &&  eval >= beta
         &&  eval < 22761) // larger than VALUE_KNOWN_WIN, but smaller than TB wins
         return eval;
@@ -822,7 +849,7 @@ namespace {
         }
     }
 
-    probCutBeta = beta + 174 - 60 * improving;
+    probCutBeta = beta + pc1 - pc2 * improving - pc3 * moreImproving + pc4 * worsening;
 
     // Step 10. ProbCut (~10 Elo)
     // If we have a good enough capture (or queen promotion) and a reduced search returns a value
@@ -966,7 +993,7 @@ moves_loop: // When in check, search starts here
 
       Value delta = beta - alpha;
 
-      Depth r = reduction(improving, depth, moveCount, delta, thisThread->rootDelta);
+      Depth r = reduction(C(imp), depth, moveCount, delta, thisThread->rootDelta);
 
       // Step 14. Pruning at shallow depth (~120 Elo). Depth conditions are important for mate finding.
       if (  !rootNode
@@ -974,7 +1001,7 @@ moves_loop: // When in check, search starts here
           && bestValue > VALUE_TB_LOSS_IN_MAX_PLY)
       {
           // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
-          moveCountPruning = moveCount >= futility_move_count(improving, depth);
+          moveCountPruning = moveCount >= futility_move_count(improving, moreImproving, worsening, depth);
 
           // Reduced depth of the next LMR search
           int lmrDepth = newDepth - r;
@@ -1058,21 +1085,25 @@ moves_loop: // When in check, search starts here
               && (tte->bound() & BOUND_LOWER)
               &&  tte->depth() >= depth - 3)
           {
-              Value singularBeta = ttValue - (99 + 65 * (ss->ttPv && !PvNode)) * depth / 64;
+              Value singularBeta = ttValue * 64 - (s1 + (PvNode ? s2 : s3) + s4 * cutNode + s5 * (ss->ttPv && !PvNode)) * depth;
+              Value sB1 = (singularBeta + c1) / 64;
+              Value sB2 = (singularBeta + c2) / 64;
+              Value sB3 = (singularBeta + c3) / 64;
+              Value sB4 = (singularBeta + c4) / 64;
               Depth singularDepth = (depth - 1) / 2;
 
               ss->excludedMove = move;
-              value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
+              value = search<NonPV>(pos, ss, sB1 - 1, sB1, singularDepth, cutNode);
               ss->excludedMove = MOVE_NONE;
 
-              if (value < singularBeta)
+              if (value < sB2)
               {
                   extension = 1;
                   singularQuietLMR = !ttCapture;
 
                   // Avoid search explosion by limiting the number of double extensions
                   if (  !PvNode
-                      && value < singularBeta - 22
+                      && value < sB3 - 22
                       && ss->doubleExtensions <= 11)
                   {
                       extension = 2;
@@ -1085,20 +1116,32 @@ moves_loop: // When in check, search starts here
               // search without the ttMove. So we assume this expected Cut-node is not singular,
               // that multiple moves fail high, and we can prune the whole subtree by returning
               // a soft bound.
-              else if (singularBeta >= beta)
-                  return singularBeta;
+              else if (sB4 >= beta)
+                  return sB4;
 
               // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
               else if (ttValue >= beta)
-                  extension = -2 - !PvNode;
+                  extension = (PvNode ? b1 : b2)
+                            - (capture && (ss+1)->cutoffCnt <= 3 ? b3 : b4)
+                            - (cutNode ? b5 : b6)
+                            + ((ss-1)->currentMove == MOVE_NULL && capture ? b7 : b8)
+							- (!capture && ss->inCheck ? b9 : b10);
 
               // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= value)
-                  extension = -1;
+                  extension = (PvNode ? v1 : v2)
+                            - (capture && (ss+1)->cutoffCnt <= 3 ? v3 : v4)
+                            - (cutNode ? v5 : v6)
+                            + ((ss-1)->currentMove == MOVE_NULL && capture ? v7 : v8)
+							- (!capture && ss->inCheck ? v9 : v10);
 
               // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= alpha)
-                  extension = -1;
+                  extension = (PvNode ? a1 : a2)
+                            - (capture && (ss+1)->cutoffCnt <= 3 ? a3 : a4)
+                            - (cutNode ? a5 : a6)
+                            + ((ss-1)->currentMove == MOVE_NULL && capture ? a7 : a8)
+							- (!capture && ss->inCheck ? a9 : a10);
           }
 
           // Check extensions (~1 Elo)

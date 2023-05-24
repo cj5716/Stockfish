@@ -142,13 +142,12 @@ namespace Stockfish::Eval::NNUE {
   }
 
   // Evaluation function. Perform differential calculation.
-  Value evaluate(const Position& pos, bool adjusted, int* complexity) {
+  Value evaluate(const Position& pos, int delta, int* complexity) {
 
     // We manually align the arrays on the stack because with gcc < 9.3
     // overaligning stack variables with alignas() doesn't work correctly.
 
     constexpr uint64_t alignment = CacheLineSize;
-    constexpr int delta = 24;
 
 #if defined(ALIGNAS_ON_STACK_VARIABLES_BROKEN)
     TransformedFeatureType transformedFeaturesUnaligned[
@@ -169,11 +168,8 @@ namespace Stockfish::Eval::NNUE {
     if (complexity)
         *complexity = abs(psqt - positional) / OutputScale;
 
-    // Give more value to positional evaluation when adjusted flag is set
-    if (adjusted)
-        return static_cast<Value>(((1024 - delta) * psqt + (1024 + delta) * positional) / (1024 * OutputScale));
-    else
-        return static_cast<Value>((psqt + positional) / OutputScale);
+    // Give more/less value to positional evaluation based on value of delta
+    return static_cast<Value>(((1024 - delta) * psqt + (1024 + delta) * positional) / (1024 * OutputScale));
   }
 
   struct NnueEvalTrace {

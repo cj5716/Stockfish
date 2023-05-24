@@ -57,9 +57,14 @@
 using namespace std;
 
 namespace Stockfish {
-
+int nnth = 2048, nnc1 = 397, nnc2 = 477, nnc3 = 945, nnc4 = 174, nnc5 = 478,
+    d1 = 98304, d2 = 0, d3 = 0, d4 = 0;
+TUNE(nnth, nnc1, nnc2, nnc3, nnc4, nnc5);
+TUNE(d1);
+TUNE(SetRange(-100,100), d2);
+TUNE(SetRange(-2048, 2048), d3, d4);
 namespace Eval {
-
+	
   bool useNNUE;
   string currentEvalFileName = "None";
 
@@ -1056,7 +1061,7 @@ Value Eval::evaluate(const Position& pos) {
   // We use the much less accurate but faster Classical eval when the NNUE
   // option is set to false. Otherwise we use the NNUE eval unless the
   // PSQ advantage is decisive. (~4 Elo at STC, 1 Elo at LTC)
-  bool useClassical = !useNNUE || abs(psq) > 2048;
+  bool useClassical = !useNNUE || abs(psq) > nnth;
 
   if (useClassical)
       v = Evaluation<NO_TRACE>(pos).value();
@@ -1067,20 +1072,21 @@ Value Eval::evaluate(const Position& pos) {
 
       Color stm = pos.side_to_move();
       Value optimism = pos.this_thread()->optimism[stm];
-
-      Value nnue = NNUE::evaluate(pos, true, &nnueComplexity);
+	  
+      int delta = (d1 - d2 * abs(psq) + d3 * pos.non_pawn_material() - d4 * pos.count<ALL_PIECES>()) / 4096;
+      Value nnue = NNUE::evaluate(pos, delta, &nnueComplexity);
 
       // Blend nnue complexity with (semi)classical complexity
-      nnueComplexity = (  397 * nnueComplexity
-                        + (477 + optimism) * abs(psq - nnue)
+      nnueComplexity = (  nnc1 * nnueComplexity
+                        + (nnc2 + optimism) * abs(psq - nnue)
                         ) / 1024;
 
       optimism += optimism * nnueComplexity / 256;
-      v = (nnue * (945 + npm) + optimism * (174 + npm)) / 1024;
+      v = (nnue * (nnc3 + npm) + optimism * (nnc4 + npm)) / 1024;
   }
 
   // Damp down the evaluation linearly when shuffling
-  v = v * (200 - pos.rule50_count()) / 214;
+  v = v * (nnc5 - pos.rule50_count()) / 512;
 
   // Guarantee evaluation does not hit the tablebase range
   v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
@@ -1144,7 +1150,7 @@ std::string Eval::trace(Position& pos) {
   ss << "\nClassical evaluation   " << to_cp(v) << " (white side)\n";
   if (Eval::useNNUE)
   {
-      v = NNUE::evaluate(pos, false);
+      v = NNUE::evaluate(pos, 0);
       v = pos.side_to_move() == WHITE ? v : -v;
       ss << "NNUE evaluation        " << to_cp(v) << " (white side)\n";
   }
