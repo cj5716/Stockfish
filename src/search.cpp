@@ -877,17 +877,16 @@ namespace {
 
     // Step 11. If the position is not in TT, decrease depth by 2 (or by 4 if the TT entry for the current position was hit and the stored depth is greater than or equal to the current depth).
     // Use qsearch if depth is equal or below zero (~9 Elo)
-    if (    PvNode
-        && !ttMove)
-        depth -= 2 + 2 * (ss->ttHit && tte->depth() >= depth);
-
-    if (depth <= 0)
-        return qsearch<PV>(pos, ss, alpha, beta);
-
-    if (    cutNode
-        &&  depth >= 8
-        && !ttMove)
-        depth -= 2;
+        
+    if (!ttMove) {
+        if (PvNode) {
+            depth -= 2 + 2 * (ss->ttHit && tte->depth() >= depth);
+            if (depth <= 0)
+                return qsearch<PV>(pos, ss, alpha, beta);
+            
+        } else if (cutNode && depth >= 8)
+            depth -= 2;
+    }
 
 moves_loop: // When in check, search starts here
 
@@ -1146,14 +1145,14 @@ moves_loop: // When in check, search starts here
       // Increase reduction for cut nodes (~3 Elo)
       if (cutNode)
           r += 2;
+      
+      // Decrease reduction for PvNodes based on depth (~2 Elo)
+      else if (PvNode)
+          r -= 1 + 11 / (3 + depth);
 
       // Increase reduction if ttMove is a capture (~3 Elo)
       if (ttCapture)
           r++;
-
-      // Decrease reduction for PvNodes based on depth (~2 Elo)
-      if (PvNode)
-          r -= 1 + 11 / (3 + depth);
 
       // Decrease reduction if ttMove has been singularly extended (~1 Elo)
       if (singularQuietLMR)
