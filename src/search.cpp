@@ -99,9 +99,9 @@ namespace {
 
   int futility_move_count(bool improving, bool moreImproving, bool worsening, Depth depth) {
     return moreImproving ? (3 + depth * depth) * fmc1 / 1024 : 
-	           improving ? (3 + depth * depth) * fmc2 / 1024 : 
+               improving ? (3 + depth * depth) * fmc2 / 1024 : 
                worsening ? (3 + depth * depth) * fmc3 / 1024 :
-			               (3 + depth * depth) * fmc4 / 1024;
+                           (3 + depth * depth) * fmc4 / 1024;
   }
 
   // History and stats update bonus, based on depth
@@ -778,8 +778,8 @@ namespace {
                   : (ss-4)->staticEval != VALUE_NONE ? ss->staticEval - (ss-4)->staticEval
                   :                                    163;
     improving = improvement > 0;
-	moreImproving = improvement > i1;
-	worsening = improvement < -i2;
+    moreImproving = improvement > i1;
+    worsening = improvement < -i2;
 
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
@@ -1125,7 +1125,7 @@ moves_loop: // When in check, search starts here
                             - (capture && (ss+1)->cutoffCnt <= 3 ? b3 : b4)
                             - (cutNode ? b5 : b6)
                             + ((ss-1)->currentMove == MOVE_NULL && capture ? b7 : b8)
-							- (!capture && ss->inCheck ? b9 : b10);
+                            - (!capture && ss->inCheck ? b9 : b10);
 
               // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= value)
@@ -1133,7 +1133,7 @@ moves_loop: // When in check, search starts here
                             - (capture && (ss+1)->cutoffCnt <= 3 ? v3 : v4)
                             - (cutNode ? v5 : v6)
                             + ((ss-1)->currentMove == MOVE_NULL && capture ? v7 : v8)
-							- (!capture && ss->inCheck ? v9 : v10);
+                            - (!capture && ss->inCheck ? v9 : v10);
 
               // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= alpha)
@@ -1141,7 +1141,7 @@ moves_loop: // When in check, search starts here
                             - (capture && (ss+1)->cutoffCnt <= 3 ? a3 : a4)
                             - (cutNode ? a5 : a6)
                             + ((ss-1)->currentMove == MOVE_NULL && capture ? a7 : a8)
-							- (!capture && ss->inCheck ? a9 : a10);
+                            - (!capture && ss->inCheck ? a9 : a10);
           }
 
           // Check extensions (~1 Elo)

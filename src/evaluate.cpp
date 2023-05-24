@@ -64,7 +64,7 @@ TUNE(d1);
 TUNE(SetRange(-100,100), d2);
 TUNE(SetRange(-2048, 2048), d3, d4);
 namespace Eval {
-	
+
   bool useNNUE;
   string currentEvalFileName = "None";
 
