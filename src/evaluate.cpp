@@ -1071,16 +1071,16 @@ Value Eval::evaluate(const Position& pos) {
       Value nnue = NNUE::evaluate(pos, true, &nnueComplexity);
 
       // Blend nnue complexity with (semi)classical complexity
-      nnueComplexity = (  397 * nnueComplexity
-                        + (477 + optimism) * abs(psq - nnue)
+      nnueComplexity = (  403 * nnueComplexity
+                        + (329 + optimism) * abs(psq - nnue)
                         ) / 1024;
 
       optimism += optimism * nnueComplexity / 256;
-      v = (nnue * (945 + npm) + optimism * (174 + npm)) / 1024;
+      v = (nnue * (1135 + npm) + optimism * (220 + npm)) / 1024;
   }
 
   // Damp down the evaluation linearly when shuffling
-  v = v * (200 - pos.rule50_count()) / 214;
+  v = v * (118 - pos.rule50_count()) / 512;
 
   // Guarantee evaluation does not hit the tablebase range
   v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
