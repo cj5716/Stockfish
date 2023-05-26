@@ -63,8 +63,8 @@ namespace {
   enum NodeType { NonPV, PV, Root };
 
   // Futility margin
-  Value futility_margin(Depth d, bool improving) {
-    return Value(148 * (d - improving));
+  Value futility_margin(Depth d, bool moreImproving, bool worsening) {
+    return Value(214 * (d - 2 * moreImproving + worsening));
   }
 
   // Reductions lookup table, initialized at startup
@@ -75,9 +75,11 @@ namespace {
     return (r + 1356 - int(delta) * 983 / int(rootDelta)) / 1024 + (!i && r > 901);
   }
 
-  constexpr int futility_move_count(bool improving, Depth depth) {
-    return improving ? (3 + depth * depth)
-                     : (3 + depth * depth) / 2;
+  constexpr int futility_move_count(bool improving, bool moreImproving, bool worsening, Depth depth) {
+    return (moreImproving ? (3 + depth * depth) * 900 : 
+                improving ? (3 + depth * depth) * 923 : 
+                worsening ? (3 + depth * depth) * 250 :
+                            (3 + depth * depth) * 264) / 1024;
   }
 
   // History and stats update bonus, based on depth
@@ -545,7 +547,7 @@ namespace {
     Move ttMove, move, excludedMove, bestMove;
     Depth extension, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
-    bool givesCheck, improving, priorCapture, singularQuietLMR;
+    bool givesCheck, improving, moreImproving, worsening, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
     int moveCount, captureCount, quietCount, improvement;
@@ -707,7 +709,7 @@ namespace {
     {
         // Skip early pruning when in check
         ss->staticEval = eval = VALUE_NONE;
-        improving = false;
+        improving = moreImproving = worsening = false;
         improvement = 0;
         goto moves_loop;
     }
@@ -753,6 +755,8 @@ namespace {
                   : (ss-4)->staticEval != VALUE_NONE ? ss->staticEval - (ss-4)->staticEval
                   :                                    163;
     improving = improvement > 0;
+    moreImproving = improvement > 55;
+    worsening = improvement < -280;
 
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
@@ -768,7 +772,7 @@ namespace {
     // The depth condition is important for mate finding.
     if (   !ss->ttPv
         &&  depth < 9
-        &&  eval - futility_margin(depth, improving) - (ss-1)->statScore / 306 >= beta
+        &&  eval - futility_margin(depth, moreImproving, worsening) - (ss-1)->statScore / 306 >= beta
         &&  eval >= beta
         &&  eval < 22761) // larger than VALUE_KNOWN_WIN, but smaller than TB wins
         return eval;
@@ -822,7 +826,7 @@ namespace {
         }
     }
 
-    probCutBeta = beta + 174 - 60 * improving;
+    probCutBeta = beta + 252 - 115 * improving + 66 * moreImproving - 50 * worsening;
 
     // Step 10. ProbCut (~10 Elo)
     // If we have a good enough capture (or queen promotion) and a reduced search returns a value
@@ -966,7 +970,7 @@ moves_loop: // When in check, search starts here
 
       Value delta = beta - alpha;
 
-      Depth r = reduction(improving, depth, moveCount, delta, thisThread->rootDelta);
+      Depth r = reduction(moreImproving, depth, moveCount, delta, thisThread->rootDelta);
 
       // Step 14. Pruning at shallow depth (~120 Elo). Depth conditions are important for mate finding.
       if (  !rootNode
@@ -974,7 +978,7 @@ moves_loop: // When in check, search starts here
           && bestValue > VALUE_TB_LOSS_IN_MAX_PLY)
       {
           // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
-          moveCountPruning = moveCount >= futility_move_count(improving, depth);
+          moveCountPruning = moveCount >= futility_move_count(improving, moreImproving, worsening, depth);
 
           // Reduced depth of the next LMR search
           int lmrDepth = newDepth - r;
@@ -1058,21 +1062,25 @@ moves_loop: // When in check, search starts here
               && (tte->bound() & BOUND_LOWER)
               &&  tte->depth() >= depth - 3)
           {
-              Value singularBeta = ttValue - (99 + 65 * (ss->ttPv && !PvNode)) * depth / 64;
+              Value singularBeta = ttValue * 64 - (141 + (PvNode ? -50 : 45 + 14 * cutNode + 42 * (ss->ttPv))) * depth;
+              Value sB1 = (singularBeta + 27) / 64;
+              Value sB2 = (singularBeta - 26) / 64;
+              Value sB3 = (singularBeta + 26) / 64;
+              Value sB4 = (singularBeta - 39) / 64;
               Depth singularDepth = (depth - 1) / 2;
 
               ss->excludedMove = move;
-              value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
+              value = search<NonPV>(pos, ss, sB1 - 1, sB1, singularDepth, cutNode);
               ss->excludedMove = MOVE_NONE;
 
-              if (value < singularBeta)
+              if (value < sB2)
               {
                   extension = 1;
                   singularQuietLMR = !ttCapture;
 
                   // Avoid search explosion by limiting the number of double extensions
                   if (  !PvNode
-                      && value < singularBeta - 22
+                      && value < sB3 - 22
                       && ss->doubleExtensions <= 11)
                   {
                       extension = 2;
@@ -1085,20 +1093,32 @@ moves_loop: // When in check, search starts here
               // search without the ttMove. So we assume this expected Cut-node is not singular,
               // that multiple moves fail high, and we can prune the whole subtree by returning
               // a soft bound.
-              else if (singularBeta >= beta)
-                  return singularBeta;
+              else if (sB4 >= beta)
+                  return sB4;
 
               // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
               else if (ttValue >= beta)
-                  extension = -2 - !PvNode;
+                  extension = 2
+                            + (PvNode ? -4 : 4 * cutNode)
+                            + 2 * !(capture && (ss+1)->cutoffCnt <= 3)
+                            - 10 * (capture || !ss->inCheck);
 
               // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= value)
-                  extension = -1;
+                  extension = -3
+                            + (PvNode ? 0 : -1 - 6 * cutNode)
+                            - 3 * (capture && (ss+1)->cutoffCnt <= 3)
+                            - 14 * !((ss-1)->currentMove == MOVE_NULL && capture)
+                            - (!capture && ss->inCheck);
 
               // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= alpha)
-                  extension = -1;
+                  extension = 1
+                            - 10 * !PvNode
+                            + !(capture && (ss+1)->cutoffCnt <= 3)
+                            - !cutNode
+                            - 3 * !((ss-1)->currentMove == MOVE_NULL && capture)
+                            + 2 * (!capture && ss->inCheck);
           }
 
           // Check extensions (~1 Elo)
