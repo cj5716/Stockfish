@@ -58,6 +58,70 @@ using Eval::evaluate;
 using namespace Search;
 
 namespace {
+    
+  constexpr int N_IN = 3;
+  constexpr int N_LAYERS = 2;
+  constexpr int N_HIDDEN = 8;
+
+  constexpr double W_IN[N_HIDDEN][N_IN+1] = {
+    { 0.00231689, -0.0132977, -0.0029895, -0.011059, },
+    { 0.00280457, 0.00228821, -0.0193097, 0.00946472, },
+    { -0.00485474, -0.00118408, -0.03, 0.0127051, },
+    { -0.00339172, 0.0113788, 0.011947, -0.0165662, },
+    { 0.0114856, -0.00643677, 0.00176208, 0.00711975, },
+    { 0.00947815, -0.0146375, 0.0037146, -0.0104285, },
+    { -0.0166132, -0.00663818, 0.0180933, 0.00808838, },
+    { 0.013421, 0.00361267, 0.00708984, 0.0116315, },
+  };
+
+  constexpr double W_HIDDEN[N_LAYERS-1][N_HIDDEN][N_HIDDEN+1] = {
+    {
+      { 0.00427795, -0.00515991, 0.0159802, 0.011153, 0.0135626, -0.0141736, 0.0012323, -0.00492249, 0.00868408, },
+      { 0.0177972, 0.0100751, 0.0241492, 0.00520264, -0.000559082, 0.00365479, 0.00501709, 0.00230469, 0.0124463, },
+      { -0.00372131, -0.0191199, 0.0123834, 0.0102997, 0.00287598, 0.00937744, 0.00234192, -0.000650635, -0.00432434, },
+      { -0.00741699, -0.00868469, 0.00283081, -0.0130298, 0.011084, 0.010188, 0.0041748, 0.000322876, 0.000175171, },
+      { -0.0103375, 0.00870789, -0.0190417, -0.0235303, 0.0215393, -0.00352905, -0.0195886, -0.0161609, 0.0119305, },
+      { -0.0183093, -0.0103198, -0.0149518, -0.00111755, 0.00293579, -0.0072467, -0.00180847, 0.0239282, 0.00995667, },
+      { 0.00221191, 0.0234979, -0.00281616, 0.00959229, 0.00461548, 0.00754822, -0.00779236, -0.00967041, 0.00623901, },
+      { 0.00938232, -0.00977844, -0.00731018, -0.000890503, 0.0142279, 0.0114246, -0.011413, 0.00151428, -0.00116028, },
+    },
+  };
+
+  constexpr double W_OUT[N_HIDDEN+1] = { 0.0118701, 0.0151642, -0.00963623, 0.00284607, 0.00873718, -0.000715332, -0.00211548, 0.00194702, -0.00595886, };
+
+  double calculateTimeCorrection(double fallingEval, double reduction, double bestMoveInstability)
+  {
+      double input[N_IN] = {fallingEval - 1, reduction - 1, bestMoveInstability - 1};
+      double hidden[N_LAYERS][N_HIDDEN];
+      double sum;
+
+      auto f = [](double x)->double { return std::max(x, 0.0); }; // relu
+
+      for(int j = 0; j < N_HIDDEN; ++j)
+      {
+          sum = W_IN[j][N_IN];
+          for(int i = 0; i < N_IN; ++i)
+              sum += W_IN[j][i] * input[i];
+          hidden[0][j] = f(sum);
+      }
+
+      for(int k = 1; k < N_LAYERS; ++k)
+      {
+          for(int j = 0; j < N_HIDDEN; ++j)
+          {
+              sum = W_HIDDEN[k-1][j][N_HIDDEN];
+              for(int i = 0; i < N_HIDDEN; ++i)
+                  sum += W_HIDDEN[k-1][j][i] * hidden[k-1][i];
+              hidden[k][j] = f(sum);
+          }
+      }
+
+      sum = W_OUT[N_HIDDEN];
+      for(int i = 0; i < N_HIDDEN; ++i)
+          sum += W_OUT[i] * hidden[N_LAYERS-1][i];
+
+      return 1 + std::clamp(sum, -1.0, 1.0);
+  }
 
   // Different node types, used as a template parameter
   enum NodeType { NonPV, PV, Root };
@@ -249,8 +313,20 @@ void MainThread::search() {
 
   sync_cout << "bestmove " << UCI::move(bestThread->rootMoves[0].pv[0], rootPos.is_chess960());
 
+
   if (bestThread->rootMoves[0].pv.size() > 1 || bestThread->rootMoves[0].extract_ponder_from_tt(rootPos))
+  {
+      StateInfo si[2];
+      rootPos.do_move(bestThread->rootMoves[0].pv[0], si[0]);
+      rootPos.do_move(bestThread->rootMoves[0].pv[1], si[1]);
+      predictedPositionKey = rootPos.key();
+      rootPos.undo_move(bestThread->rootMoves[0].pv[1]);
+      rootPos.undo_move(bestThread->rootMoves[0].pv[0]);
+
       std::cout << " ponder " << UCI::move(bestThread->rootMoves[0].pv[1], rootPos.is_chess960());
+  }
+  else
+      predictedPositionKey = 0;
 
   std::cout << sync_endl;
 }
@@ -464,8 +540,9 @@ void Thread::search() {
           timeReduction = lastBestMoveDepth + 8 < completedDepth ? 1.57 : 0.65;
           double reduction = (1.4 + mainThread->previousTimeReduction) / (2.08 * timeReduction);
           double bestMoveInstability = 1 + 1.8 * totBestMoveChanges / Threads.size();
+          double predictedOpponentMove = mainThread->predictedPositionKey == rootPos.key() ? 0.903 : 1.167;
 
-          double totalTime = Time.optimum() * fallingEval * reduction * bestMoveInstability;
+          double totalTime = Time.optimum() * fallingEval * reduction * bestMoveInstability * predictedOpponentMove * calculateTimeCorrection(fallingEval, reduction, bestMoveInstability);
 
           // Cap used time in case of a single legal move for a better viewer experience in tournaments
           // yielding correct scores and sufficiently fast moves.
