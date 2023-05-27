@@ -202,12 +202,25 @@ namespace Stockfish::Eval::NNUE {
           if (ideal <= MaxRegisters)
             return ideal;
 
+          int res = 1;
+          // faster but less accurate version of sqrt
+          __m128 sqrt = _mm_setzero_ps();
+          sqrt = _mm_cvt_si2ss(sqrt, ideal);
+          sqrt = _mm_rsqrt_ps(sqrt);
+          int isq = _mm_cvtt_ss2si(sqrt);
+		  const bool maxisq = MaxRegisters < isq;
           // Look for the largest divisor of the ideal register count that is smaller than MaxRegisters
-          for (int divisor = MaxRegisters; divisor > 1; --divisor)
-            if (ideal % divisor == 0)
-              return divisor;
+          for (int divisor = 2; divisor <= isq; ++divisor) {
+            if (ideal % divisor == 0) {
 
-          return 1;
+              if (ideal / divisor <= MaxRegisters)
+                return ideal / divisor;
+
+              else if (maxisq && divisor <= MaxRegisters)
+                res = divisor;
+            }
+          }
+          return res;
       }
 
       static constexpr int NumRegs     = BestRegisterCount<vec_t, WeightType, TransformedFeatureDimensions, NumRegistersSIMD>();
