@@ -37,7 +37,8 @@
 #include "nnue/evaluate_nnue.h"
 
 namespace Stockfish {
-
+int v1 = 10, v2 = 1717, v3 = 163, v4 = 19, v5 = 5, v6 = 257, v7 = 207, v8 = 223, v9 = 1170, v10 = 111, v11 = 136, v12 = 87;
+TUNE(v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12);
 namespace Search {
 
   LimitsType Limits;
@@ -741,7 +742,7 @@ namespace {
     // Use static evaluation difference to improve quiet move ordering (~4 Elo)
     if (is_ok((ss-1)->currentMove) && !(ss-1)->inCheck && !priorCapture)
     {
-        int bonus = std::clamp(-19 * int((ss-1)->staticEval + ss->staticEval), -1717, 1717);
+        int bonus = std::clamp(-v1 * int((ss-1)->staticEval + ss->staticEval), -v2, v2);
         thisThread->mainHistory[~us][from_to((ss-1)->currentMove)] << bonus;
     }
 
@@ -751,7 +752,7 @@ namespace {
     // margin and the improving flag are used in various pruning heuristics.
     improvement =   (ss-2)->staticEval != VALUE_NONE ? ss->staticEval - (ss-2)->staticEval
                   : (ss-4)->staticEval != VALUE_NONE ? ss->staticEval - (ss-4)->staticEval
-                  :                                    163;
+                  :                                    v3;
     improving = improvement > 0;
 
     // Step 7. Razoring (~1 Elo).
@@ -779,7 +780,7 @@ namespace {
         && (ss-1)->statScore < 18404
         &&  eval >= beta
         &&  eval >= ss->staticEval
-        &&  ss->staticEval >= beta - 19 * depth - improvement / 13 + 257
+        &&  ss->staticEval >= beta - v4 * depth - v5 * improvement / 64 + v6
         && !excludedMove
         &&  pos.non_pawn_material(us)
         && (ss->ply >= thisThread->nmpMinPly))
@@ -986,8 +987,8 @@ moves_loop: // When in check, search starts here
               if (   !givesCheck
                   && lmrDepth < 7
                   && !ss->inCheck
-                  && ss->staticEval + 207 + 223 * lmrDepth + PieceValue[EG][pos.piece_on(to_sq(move))]
-                   + captureHistory[movedPiece][to_sq(move)][type_of(pos.piece_on(to_sq(move)))] / 7 < alpha)
+                  && ss->staticEval + v7 + v8 * lmrDepth + PieceValue[EG][pos.piece_on(to_sq(move))]
+                   + captureHistory[movedPiece][to_sq(move)][type_of(pos.piece_on(to_sq(move)))] * v9 / 8192 < alpha)
                   continue;
 
               Bitboard occupied;
@@ -1029,7 +1030,7 @@ moves_loop: // When in check, search starts here
               // Futility pruning: parent node (~13 Elo)
               if (   !ss->inCheck
                   && lmrDepth < 12
-                  && ss->staticEval + 111 + 136 * lmrDepth <= alpha)
+                  && ss->staticEval + v10 + v11 * lmrDepth <= alpha)
                   continue;
 
               lmrDepth = std::max(lmrDepth, 0);
@@ -1104,7 +1105,7 @@ moves_loop: // When in check, search starts here
           // Check extensions (~1 Elo)
           else if (   givesCheck
                    && depth > 9
-                   && abs(ss->staticEval) > 87)
+                   && abs(ss->staticEval) > v12)
               extension = 1;
 
           // Quiet ttMove extensions (~1 Elo)
