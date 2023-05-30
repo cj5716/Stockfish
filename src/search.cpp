@@ -483,7 +483,7 @@ void Thread::search() {
                   Threads.stop = true;
           }
           else
-              Threads.increaseDepth = (Time.elapsed() <= totalTime * 0.50 || mainThread->ponder)
+              Threads.increaseDepth = (Time.elapsed() <= totalTime * 0.50 || mainThread->ponder);
       }
 
       mainThread->iterValue[iterIdx] = bestValue;
