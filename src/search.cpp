@@ -37,7 +37,12 @@
 #include "nnue/evaluate_nnue.h"
 
 namespace Stockfish {
-
+int d1 = 2, d2 = 8, d3 = 2, d4 = 8, d5 = 2, d6 = 8, d7 = 2, d8 = 8, d9 = 2, d10 = 8, d11 = 2, d12 = 8, d13 = 2, d14 = 8,
+    mc1 = 1, mc2 = 1, mc3 = 1, cn1 = 2, cn2 = 2, cn3 = 2, ttc1 = 1, ttc2 = 1, ttc3 = 1, pv1 = 3, pv2 = 2, pv3 = 1,
+    sqlm1 = 1, sqlm2 = 1, sqlm3 = 1, cc1 = 1, cc2 = 1, cc3 = 1, tt1 = 1, tt2 = 1, tt3 = 1;
+TUNE(SetRange(1,6), d1, d3, d5, d7, d9, d11, d13);
+TUNE(SetRange(5,13), d2, d4, d6, d8, d10, d12, d14);
+TUNE(SetRange(0,3), mc1, mc2, mc3, cn1, cn2, cn3, ttc1, ttc2, ttc3, pv1, pv2, pv3, sqlm1, sqlm2, sqlm3, cc1, cc2, cc3, tt1, tt2, tt3);
 namespace Search {
 
   LimitsType Limits;
@@ -1124,30 +1129,30 @@ moves_loop: // When in check, search starts here
 
       // Decrease reduction if opponent's move count is high (~1 Elo)
       if ((ss-1)->moveCount > 8)
-          r--;
+          r -= depth <= d1 ? mc1 : depth <= d2 ? mc2 : mc3;
 
       // Increase reduction for cut nodes (~3 Elo)
       if (cutNode)
-          r += 2;
+          r += depth <= d3 ? cn1 : depth <= d4 ? cn2 : cn3;
 
       // Increase reduction if ttMove is a capture (~3 Elo)
       if (ttCapture)
-          r++;
+          r += depth <= d5 ? ttc1 : depth <= d6 ? ttc2 : ttc3;
 
       // Decrease reduction for PvNodes based on depth (~2 Elo)
       if (PvNode)
-          r -= 1 + 12 / (3 + depth);
+          r -= depth <= d7 ? pv1 : depth <= d8 ? pv2 : pv3;
 
       // Decrease reduction if ttMove has been singularly extended (~1 Elo)
       if (singularQuietLMR)
-          r--;
+          r -= depth <= d9 ? sqlm1 : depth <= d10 ? sqlm2 : sqlm3;
 
       // Increase reduction if next ply has a lot of fail high (~5 Elo)
       if ((ss+1)->cutoffCnt > 3)
-          r++;
+          r += depth <= d11 ? cc1 : depth <= d12 ? cc2 : cc3;
 
       else if (move == ttMove)
-          r--;
+          r -= depth <= d13 ? tt1 : depth <= d14 ? tt2 : tt3;
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
