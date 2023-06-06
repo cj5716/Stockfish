@@ -1063,16 +1063,17 @@ Value Eval::evaluate(const Position& pos) {
   else
   {
       int nnueComplexity;
-      int npm = pos.non_pawn_material() / 64;
-
+      int s1 = 922 + 15 * pos.non_pawn_material() / 1024 + 3 * pos.count<PAWN>();
+      int s2 = 173 + 31 * pos.non_pawn_material() / 2048 + pos.count<PAWN>();
+      
       Color stm = pos.side_to_move();
       Value optimism = pos.this_thread()->optimism[stm];
 
       Value nnue = NNUE::evaluate(pos, true, &nnueComplexity);
 
       // Blend optimism with nnue complexity and (semi)classical complexity
-      optimism += optimism * (nnueComplexity + abs(psq - nnue)) / 512;
-      v = (nnue * (945 + npm) + optimism * (150 + npm)) / 1024;
+      optimism += 27 * optimism * (3 * nnueComplexity + 4 * abs(psq - nnue)) / 65536;
+      v = (nnue * s1 + optimism * s2) / 1024;
   }
 
   // Damp down the evaluation linearly when shuffling
