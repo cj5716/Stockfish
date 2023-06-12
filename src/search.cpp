@@ -38,6 +38,10 @@
 
 namespace Stockfish {
 
+const int N = 22;
+int A[N];
+
+TUNE(SetRange(-100, 100), A);
 namespace Search {
 
   LimitsType Limits;
@@ -1133,6 +1137,12 @@ moves_loop: // When in check, search starts here
 
       // Step 16. Make the move
       pos.do_move(move, st, givesCheck);
+      
+      ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
+                     + (*contHist[0])[movedPiece][to_sq(move)]
+                     + (*contHist[1])[movedPiece][to_sq(move)]
+                     + (*contHist[3])[movedPiece][to_sq(move)]
+                     - 4006;
 
       // Decrease reduction if position is or has been on the PV
       // and node is not likely to fail low. (~3 Elo)
@@ -1148,14 +1158,49 @@ moves_loop: // When in check, search starts here
       // Increase reduction for cut nodes (~3 Elo)
       if (cutNode)
           r += 2;
+      
+      // Decrease reduction for PvNodes based on depth (~2 Elo)
+      else if (PvNode)
+          r -= 1 + 12 / (3 + depth);
+      
+      else {
+          bool C[N] = {
+              capture,
+              givesCheck,
+              priorCapture,
+              improving,
+              move == ttMove,
+              move == countermove,
+              move == ss->killers[0],
+              move == ss->killers[1],
+              type_of(move) == PROMOTION,
+              singularQuietLMR,
+              ttCapture,
+              ss->inCheck,
+              (ss-1)->inCheck,
+              ss->ttPv,
+              (ss-1)->ttPv,
+              ss->statScore < 0,
+              (ss-1)->statScore < 0,
+              (ss+1)->cutoffCnt > 3,
+              (ss-1)->moveCount > 8,
+              ss->ply > depth,
+              extension > 0,
+              extension < 0,
+          };
+#define R(a, c) (std::rand() % 100 >= abs(a) ? true : (a) < 0 ? !(c) : (c))
+
+          bool P = true;
+          for(int i = 0; i < N && P; ++i)
+              P = R(A[i], C[i]);
+
+          if (P)
+              r++;
+      }
 
       // Increase reduction if ttMove is a capture (~3 Elo)
       if (ttCapture)
           r++;
-
-      // Decrease reduction for PvNodes based on depth (~2 Elo)
-      if (PvNode)
-          r -= 1 + 12 / (3 + depth);
 
       // Decrease reduction if ttMove has been singularly extended (~1 Elo)
       if (singularQuietLMR)
@@ -1167,12 +1212,6 @@ moves_loop: // When in check, search starts here
 
       else if (move == ttMove)
           r--;
-
-      ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
-                     + (*contHist[0])[movedPiece][to_sq(move)]
-                     + (*contHist[1])[movedPiece][to_sq(move)]
-                     + (*contHist[3])[movedPiece][to_sq(move)]
-                     - 4006;
 
       // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
       r -= ss->statScore / (11124 + 4740 * (depth > 5 && depth < 22));
