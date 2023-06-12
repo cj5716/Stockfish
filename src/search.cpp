@@ -37,6 +37,13 @@
 #include "nnue/evaluate_nnue.h"
 
 namespace Stockfish {
+int v1 = 4, v2 = 22, v3 = 2, v4 = 0, v5 = 0, v6 = 0, v7 = 3, v8 = 82, v9 = 65, v10 = 21, v11 = 11, v12 = 13, v13 = 2, v14 = 1, v15 = 1, v16 = 0, v17 = 1, v18 = 0, v19 = 9, v20 = 5168;
+TUNE(SetRange(-10,10),v1);
+TUNE(v2);
+TUNE(SetRange(-10,10),v3,v4,v5,v6,v7);
+TUNE(v8,v9,v10,v11,v12);
+TUNE(SetRange(-5,5),v13,v14,v15,v16,v17,v18);
+TUNE(v19,v20);
 
 namespace Search {
 
@@ -1053,15 +1060,15 @@ moves_loop: // When in check, search starts here
           // a reduced search on all the other moves but the ttMove and if the
           // result is lower than ttValue minus a margin, then we will extend the ttMove.
           if (   !rootNode
-              &&  depth >= 4 - (thisThread->completedDepth > 22) + 2 * (PvNode && tte->is_pv())
+              &&  depth >= v1 - (thisThread->completedDepth > v2) + v3 * (PvNode && tte->is_pv()) + v4 * ss->ttPv + v5 * PvNode + v6 * cutNode
               &&  move == ttMove
               && !excludedMove // Avoid recursive singular search
            /* &&  ttValue != VALUE_NONE Already implicit in the next condition */
               &&  abs(ttValue) < VALUE_KNOWN_WIN
               && (tte->bound() & BOUND_LOWER)
-              &&  tte->depth() >= depth - 3)
+              &&  tte->depth() >= depth - v7)
           {
-              Value singularBeta = ttValue - (82 + 65 * (ss->ttPv && !PvNode)) * depth / 64;
+              Value singularBeta = ttValue - (v8 + v9 * (ss->ttPv && !PvNode)) * depth / 64;
               Depth singularDepth = (depth - 1) / 2;
 
               ss->excludedMove = move;
@@ -1075,11 +1082,11 @@ moves_loop: // When in check, search starts here
 
                   // Avoid search explosion by limiting the number of double extensions
                   if (  !PvNode
-                      && value < singularBeta - 21
-                      && ss->doubleExtensions <= 11)
+                      && value < singularBeta - v10
+                      && ss->doubleExtensions <= v11)
                   {
                       extension = 2;
-                      depth += depth < 13;
+                      depth += depth < v12;
                   }
               }
 
@@ -1093,27 +1100,27 @@ moves_loop: // When in check, search starts here
 
               // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
               else if (ttValue >= beta)
-                  extension = -2 - !PvNode;
+                  extension = -v13 - v14 * !PvNode;
 
               // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= value)
-                  extension = -1;
+                  extension = -v15 - v16 * !PvNode;
 
               // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= alpha)
-                  extension = -1;
+                  extension = -v17 - v18 * !PvNode;
           }
 
           // Check extensions (~1 Elo)
           else if (   givesCheck
-                   && depth > 9)
+                   && depth > v19)
               extension = 1;
 
           // Quiet ttMove extensions (~1 Elo)
           else if (   PvNode
                    && move == ttMove
                    && move == ss->killers[0]
-                   && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
+                   && (*contHist[0])[movedPiece][to_sq(move)] >= v20)
               extension = 1;
       }
 
