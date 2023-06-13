@@ -1163,7 +1163,7 @@ moves_loop: // When in check, search starts here
           r -= 1 + 12 / (3 + depth);
       
       // Increase reduction for Allnodes if conditions are fulfilled
-      else if (ttCapture
+      else if (move == ttMove
             && ss->statScore >= 0
             && (ss+1)->cutoffCnt > 3
             && move != ss->killers[1])
