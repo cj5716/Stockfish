@@ -37,10 +37,14 @@
 #include "nnue/evaluate_nnue.h"
 
 namespace Stockfish {
-int v1 = 82, v2 = 65, v3 = 1, v4 = 0, v5 = 0, v6 = 1, v7 = 21;
-TUNE(v1,v2);
-TUNE(SetRange(-5,5),v3,v4,v5,v6);
-TUNE(v7);
+int s1 = 82, s2 = 65, s3 = 0, s4 = 1, s5 = 0, s6 = 1, s7 = 21;
+TUNE(s1,s2);
+TUNE(SetRange(-5,5),s3);
+TUNE(SetRange(1,5),s4);
+TUNE(SetRange(-5,5),s5);
+TUNE(SetRange(1,5),s6);
+TUNE(s7);
+
 namespace Search {
 
   LimitsType Limits;
@@ -1067,7 +1071,7 @@ moves_loop: // When in check, search starts here
               && (tte->bound() & BOUND_LOWER)
               &&  tte->depth() >= depth - 3)
           {
-              Value singularBeta = ttValue - (v1 + v2 * (ss->ttPv && !PvNode)) * (v3 + v4 * depth) * (v5 + v6 * depth) / 64;
+              Value singularBeta = ttValue - (s1 + s2 * (ss->ttPv && !PvNode)) * (s3 + s4 * depth) * (s5 + s6 * depth) / 64;
               Depth singularDepth = (depth - 1) / 2;
 
               ss->excludedMove = move;
@@ -1081,7 +1085,7 @@ moves_loop: // When in check, search starts here
 
                   // Avoid search explosion by limiting the number of double extensions
                   if (  !PvNode
-                      && value < singularBeta - v7
+                      && value < singularBeta - s7
                       && ss->doubleExtensions <= 11)
                   {
                       extension = 2;
