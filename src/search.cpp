@@ -1093,13 +1093,13 @@ moves_loop: // When in check, search starts here
               // a soft bound.
               else if (singularBeta >= beta)
                   return singularBeta;
-              
-              else if (cutNode)
-                  extension = -3 - (ttValue >= beta);
 
               // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
               else if (ttValue >= beta)
                   extension = -2 - !PvNode;
+              
+              else if (cutNode)
+                  extension = -3;
 
               // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= value)
