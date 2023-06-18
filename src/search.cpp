@@ -37,8 +37,6 @@
 #include "nnue/evaluate_nnue.h"
 
 namespace Stockfish {
-int v1 = 7, v2 = 15;
-TUNE(v1,v2);
 
 namespace Search {
 
@@ -1100,7 +1098,7 @@ moves_loop: // When in check, search starts here
               else if (ttValue >= beta)
                   extension = -2 - !PvNode;
 
-              else if (cutNode && depth > v1 && depth < v2)
+              else if (cutNode && depth > 8 && depth < 17)
                   extension = -3;
 
               // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
