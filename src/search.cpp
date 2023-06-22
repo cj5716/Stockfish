@@ -310,6 +310,7 @@ void Thread::search() {
 
   multiPV = std::min(multiPV, rootMoves.size());
 
+  int ct = Options["Contempt"] * PawnValueEg / 100;
   int searchAgainCounter = 0;
 
   // Iterative deepening loop until requested to stop or the target depth is reached
@@ -351,6 +352,9 @@ void Thread::search() {
           delta = Value(10) + int(prev) * prev / 15799;
           alpha = std::max(prev - delta,-VALUE_INFINITE);
           beta  = std::min(prev + delta, VALUE_INFINITE);
+          
+          // Adjust contempt based on root move's previousScore
+          contempt = Value(ct) + 88 * prev / (std::abs(prev) + 200);
 
           // Adjust optimism based on root move's previousScore
           int opt = 109 * prev / (std::abs(prev) + 141);
