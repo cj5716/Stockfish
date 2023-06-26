@@ -38,9 +38,8 @@
 
 namespace Stockfish {
 int v1 = 140, v2 = 280, v3 = 420, v4 = 560, v5 = 700, v6 = 840, v7 = 980, v8 = 1120,
-    v9 = 140, v10 = 0;
+    v9 = 140;
 TUNE(v1,v2,v3,v4,v5,v6,v7,v8,v9);
-TUNE(SetRange(-1024,1024),v10);
 namespace Search {
 
   LimitsType Limits;
@@ -66,10 +65,10 @@ namespace {
   enum NodeType { NonPV, PV, Root };
 
   // Futility margin
-  Value futility_margin(Depth d, bool improving, int improvement) {
+  Value futility_margin(Depth d, bool improving) {
     assert(d < 9);
     int margins[] = {v1, v2, v3, v4, v5, v6, v7, v8};
-    return Value(margins[d - 1] - v9 * improving - v10 * improvement / 2048);
+    return Value(margins[d - 1] - v9 * improving);
   }
 
   // Reductions lookup table, initialized at startup
@@ -773,7 +772,7 @@ namespace {
     // The depth condition is important for mate finding.
     if (   !ss->ttPv
         &&  depth < 9
-        &&  eval - futility_margin(depth, improving, improvement) - (ss-1)->statScore / 306 >= beta
+        &&  eval - futility_margin(depth, improving) - (ss-1)->statScore / 306 >= beta
         &&  eval >= beta
         &&  eval < 24923) // larger than VALUE_KNOWN_WIN, but smaller than TB wins
         return eval;
