@@ -37,9 +37,7 @@
 #include "nnue/evaluate_nnue.h"
 
 namespace Stockfish {
-int v1 = 140, v2 = 280, v3 = 420, v4 = 560, v5 = 700, v6 = 840, v7 = 980, v8 = 1120,
-    v9 = 140;
-TUNE(v1,v2,v3,v4,v5,v6,v7,v8,v9);
+
 namespace Search {
 
   LimitsType Limits;
@@ -66,9 +64,8 @@ namespace {
 
   // Futility margin
   Value futility_margin(Depth d, bool improving) {
-    assert(d < 9);
-    int margins[] = {v1, v2, v3, v4, v5, v6, v7, v8};
-    return Value(margins[d - 1] - v9 * improving);
+    int margins[] = {136, 267, 414, 541, 683, 847, 1014, 1158};
+    return Value(margins[d - 1] - 149 * improving);
   }
 
   // Reductions lookup table, initialized at startup
