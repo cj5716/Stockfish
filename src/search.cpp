@@ -64,8 +64,8 @@ namespace {
 
   // Futility margin
   Value futility_margin(Depth d, bool improving) {
-    int margins[] = {137, 263, 414, 563, 722, 865, 996, 1135};
-    return Value(margins[d - 1] - 155 * improving);
+    int margins[] = {133, 264, 402, 572, 721, 880, 994, 1185};
+    return Value(margins[d - 1] - 156 * improving);
   }
 
   // Reductions lookup table, initialized at startup
