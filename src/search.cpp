@@ -37,6 +37,19 @@
 #include "nnue/evaluate_nnue.h"
 
 namespace Stockfish {
+int v1 = 0, v2 = 20, v3 = 0, v4 = 20, v5 = 8, v6 = 17, v7 = 8, v8 = 17, v9 = 0, v10 = 20, v11 = 0, v12 = 20;
+TUNE(SetRange(0,15), v1);
+TUNE(v2);
+TUNE(SetRange(0,15), v3);
+TUNE(v4);
+TUNE(v5);
+TUNE(v6);
+TUNE(v7);
+TUNE(v8);
+TUNE(SetRange(0,15), v9);
+TUNE(v10);
+TUNE(SetRange(0,15), v11);
+TUNE(v12);
 
 namespace Search {
 
@@ -1096,18 +1109,18 @@ moves_loop: // When in check, search starts here
 
               // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
               else if (ttValue >= beta)
-                  extension = -2 - !PvNode;
+                  extension = -1 - (depth > v1 && depth < v2) - (depth > v3 && depth < v4 && !PvNode);
 
               // If we are on a cutNode, reduce it based on depth (negative extension) (~1 Elo)
               else if (cutNode)
-                  extension = depth > 8 && depth < 17 ? -3 : -1;
+                  extension = depth > v5 && depth < v6 ? depth > v7 && depth < v8 ? -3 : -2 : -1;
 
               // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= value)
+              else if (ttValue <= value && depth > v9 && depth < v10)
                   extension = -1;
 
               // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= alpha)
+              else if (ttValue <= alpha && depth > v11 && depth < v12)
                   extension = -1;
           }
 
