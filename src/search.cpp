@@ -1096,14 +1096,14 @@ moves_loop: // When in check, search starts here
 
               // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
               else if (ttValue >= beta)
-                  extension = -2 - !PvNode;
+                  extension = -1 - (depth < 20) - !PvNode;
 
               // If we are on a cutNode, reduce it based on depth (negative extension) (~1 Elo)
               else if (cutNode)
-                  extension = depth > 8 && depth < 17 ? -3 : -1;
+                  extension = depth > 8 && depth < 18 ? -3 : -1;
 
               // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= value)
+              else if (ttValue <= value && depth < 20)
                   extension = -1;
 
               // If the eval of ttMove is less than alpha, we reduce it (negative extension) (~1 Elo)
