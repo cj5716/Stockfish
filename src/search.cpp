@@ -994,6 +994,9 @@ moves_loop: // When in check, search starts here
               // SEE based pruning (~11 Elo)
               if (!pos.see_ge(move, occupied, Value(-205) * depth))
               {
+                 if (!pos.see_ge(move, Value(-410) * depth))
+                    continue;
+
                  if (depth < 2 - capture)
                     continue;
                  // Don't prune the move if opponent Queen/Rook is under discovered attack after the exchanges
