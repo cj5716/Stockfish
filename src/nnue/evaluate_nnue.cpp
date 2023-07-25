@@ -81,8 +81,8 @@ namespace Stockfish::Eval::NNUE {
   }
 
   }  // namespace Detail
-int v1 = 512;
-int v2 = 1024;
+int v1 = 1024;
+int v2 = 512;
 TUNE(v1,v2);
 
   // Initialize the evaluation function parameters
