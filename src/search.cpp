@@ -732,7 +732,9 @@ namespace {
     }
     else
     {
-        ss->staticEval = eval = evaluate(pos);
+        // In case of null move search use previous static eval with a different sign
+        ss->staticEval = bestValue = (ss-1)->currentMove != MOVE_NULL ? evaluate(pos)
+                                                                      : -(ss-1)->staticEval;
         // Save static evaluation into the transposition table
         tte->save(posKey, VALUE_NONE, ss->ttPv, BOUND_NONE, DEPTH_NONE, MOVE_NONE, eval);
     }
