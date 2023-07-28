@@ -613,12 +613,11 @@ namespace {
     if (!excludedMove)
         ss->ttPv = PvNode || (ss->ttHit && tte->is_pv());
 
-    // At non-PV nodes we check for an early TT cutoff
-    if (  !PvNode
-        && !excludedMove
+    // At non-PV nodes we check for an early TT cutoff. If we are on PV still update stat bonuses.
+    if (   !excludedMove
         && tte->depth() > depth
         && ttValue != VALUE_NONE // Possible in case of TT access race or if !ttHit
-        && (tte->bound() & (ttValue >= beta ? BOUND_LOWER : BOUND_UPPER)))
+        && (tte->bound() == BOUND_EXACT || (tte->bound() == BOUND_LOWER && ttValue >= beta) || (tte->bound() == BOUND_UPPER && ttValue <= alpha)))
     {
         // If ttMove is quiet, update move sorting heuristics on TT hit (~2 Elo)
         if (ttMove)
@@ -634,7 +633,7 @@ namespace {
                     update_continuation_histories(ss-1, pos.piece_on(prevSq), prevSq, -stat_bonus(depth + 1));
             }
             // Penalty for a quiet ttMove that fails low (~1 Elo)
-            else if (!ttCapture)
+            else if (ttValue <= alpha && !ttCapture)
             {
                 int penalty = -stat_bonus(depth);
                 thisThread->mainHistory[us][from_to(ttMove)] << penalty;
@@ -644,7 +643,8 @@ namespace {
 
         // Partial workaround for the graph history interaction problem
         // For high rule50 counts don't produce transposition table cutoffs.
-        if (pos.rule50_count() < 90)
+        // At non-PV nodes we check for an early TT cutoff.
+        if (!PvNode && pos.rule50_count() < 90)
             return ttValue;
     }
 
