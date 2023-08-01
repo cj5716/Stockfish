@@ -37,7 +37,8 @@
 #include "nnue/evaluate_nnue.h"
 
 namespace Stockfish {
-
+int v1 = 7, v2 = 7, v3 = -400, v4 = -400;
+TUNE(v1,v2,v3,v4);
 namespace Search {
 
   LimitsType Limits;
@@ -627,8 +628,8 @@ namespace {
             {
                 if (ttCapture)
                 {
-                   if ((tte->depth() < 4 + cutNode) &&
-                      thisThread->captureHistory[pos.moved_piece(ttMove)][to_sq(ttMove)][type_of(pos.piece_on(to_sq(ttMove)))] < -380 - 30 * !cutNode)
+                   if (depth < (cutNode ? v1 : v2) &&
+                      thisThread->captureHistory[pos.moved_piece(ttMove)][to_sq(ttMove)][type_of(pos.piece_on(to_sq(ttMove)))] < (cutNode ? v3 : v4))
                       thisThread->captureHistory[pos.moved_piece(ttMove)][to_sq(ttMove)][type_of(pos.piece_on(to_sq(ttMove)))] << stat_bonus(depth);
                 }
                 // Bonus for a quiet ttMove that fails high (~2 Elo)
