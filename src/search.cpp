@@ -627,7 +627,7 @@ namespace {
             {
                 if (ttCapture)
                 {
-                   if (tte->depth() < 5 &&
+                   if ((tte->depth() < 4 + cutNode) &&
                       thisThread->captureHistory[pos.moved_piece(ttMove)][to_sq(ttMove)][type_of(pos.piece_on(to_sq(ttMove)))] < -380 - 30 * !cutNode)
                       thisThread->captureHistory[pos.moved_piece(ttMove)][to_sq(ttMove)][type_of(pos.piece_on(to_sq(ttMove)))] << stat_bonus(depth);
                 }
