@@ -613,10 +613,11 @@ namespace {
     if (!excludedMove)
         ss->ttPv = PvNode || (ss->ttHit && tte->is_pv());
 
-    // At non-PV nodes we check for an early TT cutoff. If we are on PV still update stat bonuses.
+    // At non-PV nodes we check for an early TT cutoff. If we are on PV still update stats/history.
     if (   !excludedMove
         && tte->depth() > depth
         && ttValue != VALUE_NONE // Possible in case of TT access race or if !ttHit
+        && (PvNode || cutNode || ttValue <= alpha)
         && (tte->bound() == BOUND_EXACT || (tte->bound() == BOUND_LOWER && ttValue >= beta) || (tte->bound() == BOUND_UPPER && ttValue <= alpha)))
     {
         // If ttMove is quiet, update move sorting heuristics on TT hit (~2 Elo)
