@@ -758,8 +758,8 @@ namespace {
     // return a fail low.
     if (eval < alpha - 456 - 252 * depth * depth)
     {
-        value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
-        if (value < alpha)
+        value = qsearch<NonPV>(pos, ss, alpha, alpha + 1);
+        if (value < alpha + 1)
             return value;
     }
 
