@@ -755,9 +755,13 @@ namespace {
 
     // Step 7. Razoring (~1 Elo).
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
-    // return a fail low.
+    // return a fail low. Or, if eval is already equal to current TT value, return 
+    // a fail low without qsearch.
     if (eval < alpha - 456 - 252 * depth * depth)
     {
+        if (ss->ttHit && eval == ttValue)
+            return ttValue;
+
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
             return value;
