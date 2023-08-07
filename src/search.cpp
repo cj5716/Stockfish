@@ -37,7 +37,8 @@
 #include "nnue/evaluate_nnue.h"
 
 namespace Stockfish {
-
+int v1 = 82, v2 = 65, v3 = 32;
+TUNE(v1,v2,v3);
 namespace Search {
 
   LimitsType Limits;
@@ -1063,7 +1064,7 @@ moves_loop: // When in check, search starts here
               && (tte->bound() & BOUND_LOWER)
               &&  tte->depth() >= depth - 3)
           {
-              Value singularBeta = ttValue - (82 + 65 * (ss->ttPv && !PvNode)) * depth / 64;
+              Value singularBeta = ttValue - (v1 + v2 * (ss->ttPv && !PvNode)) * depth / 64 - v3 / (depth * depth);
               Depth singularDepth = (depth - 1) / 2;
 
               ss->excludedMove = move;
