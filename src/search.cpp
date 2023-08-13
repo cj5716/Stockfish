@@ -1168,7 +1168,7 @@ moves_loop: // When in check, search starts here
           r++;
 
       else if (move == ttMove)
-          r -= tte->depth() > depth ? std::min(tte->depth() - depth, 3) : 1;
+          r -= tte->depth() > depth ? 2 : 1;
 
       ss->statScore =  2 * thisThread->mainHistory[us][from_to(move)]
                      + (*contHist[0])[movedPiece][to_sq(move)]
