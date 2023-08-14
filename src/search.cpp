@@ -800,11 +800,10 @@ namespace {
 
         if (nullValue >= beta)
         {
-            // Do not return unproven mate or TB scores
-            nullValue = std::min(nullValue, VALUE_TB_WIN_IN_MAX_PLY-1);
 
+            // Do not return unproven mate or TB scores
             if (thisThread->nmpMinPly || depth < 14)
-                return nullValue;
+                return nullValue > VALUE_TB_WIN_IN_MAX_PLY ? beta : nullValue;
 
             assert(!thisThread->nmpMinPly); // Recursive verification is not allowed
 
