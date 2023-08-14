@@ -708,7 +708,7 @@ namespace {
         // Skip early pruning when in check
         ss->staticEval = eval = VALUE_NONE;
         improving = false;
-        goto moves_loop;
+        goto label_in_check;
     }
     else if (excludedMove)
     {
@@ -820,6 +820,8 @@ namespace {
                 return nullValue;
         }
     }
+    
+label_in_check: // When in check, search starts here
 
     // Step 10. If the position doesn't have a ttMove, decrease depth by 2
     // (or by 4 if the TT entry for the current position was hit and the stored depth is greater than or equal to the current depth).
@@ -836,12 +838,25 @@ namespace {
         && !ttMove)
         depth -= 2;
 
+    // Step 11. A small Probcut idea, when we are in check (~4 Elo)
+    probCutBeta = beta + 413;
+    if (   ss->inCheck
+        && !PvNode
+        && ttCapture
+        && (tte->bound() & BOUND_LOWER)
+        && tte->depth() >= depth - 4
+        && ttValue >= probCutBeta
+        && abs(ttValue) <= VALUE_KNOWN_WIN
+        && abs(beta) <= VALUE_KNOWN_WIN)
+        return probCutBeta;
+
     probCutBeta = beta + 168 - 61 * improving;
 
-    // Step 11. ProbCut (~10 Elo)
+    // Step 12. ProbCut (~10 Elo)
     // If we have a good enough capture (or queen promotion) and a reduced search returns a value
     // much above beta, we can (almost) safely prune the previous move.
     if (   !PvNode
+        && !ss->inCheck
         &&  depth > 3
         &&  abs(beta) < VALUE_TB_WIN_IN_MAX_PLY
         // If value from transposition table is lower than probCutBeta, don't attempt probCut
@@ -888,20 +903,6 @@ namespace {
 
         Eval::NNUE::hint_common_parent_position(pos);
     }
-
-moves_loop: // When in check, search starts here
-
-    // Step 12. A small Probcut idea, when we are in check (~4 Elo)
-    probCutBeta = beta + 413;
-    if (   ss->inCheck
-        && !PvNode
-        && ttCapture
-        && (tte->bound() & BOUND_LOWER)
-        && tte->depth() >= depth - 4
-        && ttValue >= probCutBeta
-        && abs(ttValue) <= VALUE_KNOWN_WIN
-        && abs(beta) <= VALUE_KNOWN_WIN)
-        return probCutBeta;
 
     const PieceToHistory* contHist[] = { (ss-1)->continuationHistory, (ss-2)->continuationHistory,
                                           nullptr                   , (ss-4)->continuationHistory,
