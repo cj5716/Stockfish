@@ -53,7 +53,12 @@
 using namespace std;
 
 namespace Stockfish {
-
+int v1 = 512, v2 = 915, v3 = 9, v4 = 154, v5 = 1, v6 = 200, v7 = 214;
+TUNE(v1,v2);
+TUNE(SetRange(-10,10),v3);
+TUNE(v4);
+TUNE(SetRange(-10,10),v5);
+TUNE(v6,v7);
 namespace Eval {
 
   string currentEvalFileName = "None";
@@ -153,13 +158,13 @@ Value Eval::evaluate(const Position& pos) {
   Value nnue = NNUE::evaluate(pos, true, &nnueComplexity);
 
   // Blend optimism with nnue complexity
-  optimism += optimism * nnueComplexity / 512;
+  optimism += optimism * nnueComplexity / v1;
 
-  v = (  nnue     * (915 + npm + 9 * pos.count<PAWN>())
-       + optimism * (154 + npm +     pos.count<PAWN>())) / 1024;
+  v = (  nnue     * (v2 + npm + v3 * pos.count<PAWN>())
+       + optimism * (v4 + npm + v5 * pos.count<PAWN>())) / 1024;
 
   // Damp down the evaluation linearly when shuffling
-  v = v * (200 - pos.rule50_count()) / 214;
+  v = v * (v6 - pos.rule50_count()) / v7;
 
   // Guarantee evaluation does not hit the tablebase range
   v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
