@@ -1865,9 +1865,6 @@ string UCI::pv(const Position& pos, Depth depth) {
       Depth d = updated ? depth : std::max(1, depth - 1);
       Value v = updated ? rootMoves[i].uciScore : rootMoves[i].previousScore;
 
-      if (v == -VALUE_INFINITE)
-          v = VALUE_ZERO;
-
       bool tb = TB::RootInTB && abs(v) < VALUE_MATE_IN_MAX_PLY;
       v = tb ? rootMoves[i].tbScore : v;
 
