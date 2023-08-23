@@ -619,8 +619,8 @@ namespace {
         && tte->depth() >= depth
         && ttValue != VALUE_NONE // Possible in case of TT access race or if !ttHit
         && (tte->bound() == BOUND_EXACT
-        ||  tte->bound() == BOUND_LOWER && ttValue <= alpha
-        ||  tte->bound() == BOUND_UPPER && ttValue >= beta))
+        || (tte->bound() == BOUND_LOWER && ttValue >= beta)
+        || (tte->bound() == BOUND_UPPER && ttValue <= alpha)))
     {
         // If ttMove is quiet, update move sorting heuristics on TT hit (~2 Elo)
         if (ttMove)
