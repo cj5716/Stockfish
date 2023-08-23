@@ -616,7 +616,7 @@ namespace {
     // At non-PV nodes we check for an early TT cutoff. Otherwise
     // just update history heuristics.
     if (   !excludedMove
-        && tte->depth() > depth
+        && tte->depth() >= depth
         && ttValue != VALUE_NONE // Possible in case of TT access race or if !ttHit
         && (tte->bound() == BOUND_EXACT
         ||  tte->bound() == BOUND_LOWER && ttValue <= alpha
@@ -647,7 +647,7 @@ namespace {
         // Partial workaround for the graph history interaction problem
         // For high rule50 counts don't produce transposition table cutoffs.
         // Do the TT cutoff if we are on a non-PV node.
-        if (!PvNode && pos.rule50_count() < 90)
+        if (!PvNode && tte->depth() > depth && pos.rule50_count() < 90)
             return ttValue;
     }
 
