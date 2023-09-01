@@ -37,7 +37,8 @@
 #include "nnue/evaluate_nnue.h"
 
 namespace Stockfish {
-
+int v1 = 4, v2 = 22, v3 = 2, v4 = 82, v5 = 65, v6 = 21, v7 = 11, v8 = 13, v9 = 17;
+TUNE(v1,v2,v3,v4,v5,v6,v7,v8,v9);
 namespace Search {
 
   LimitsType Limits;
@@ -1036,15 +1037,15 @@ moves_loop: // When in check, search starts here
           // Their values are optimized to time controls of 180+1.8 and longer
           // so changing them requires tests at this type of time controls.
           if (   !rootNode
-              &&  depth >= 4 - (thisThread->completedDepth > 22) + 2 * (PvNode && tte->is_pv())
+              &&  depth >= v1 - (thisThread->completedDepth > v2) + v3 * (PvNode && tte->is_pv())
               &&  move == ttMove
               && !excludedMove // Avoid recursive singular search
            /* &&  ttValue != VALUE_NONE Already implicit in the next condition */
               &&  abs(ttValue) < VALUE_KNOWN_WIN
               && (tte->bound() & BOUND_LOWER)
-              &&  tte->depth() >= depth - 3)
+              &&  tte->depth() >= depth - 4)
           {
-              Value singularBeta = ttValue - (82 + 65 * (ss->ttPv && !PvNode)) * depth / 64;
+              Value singularBeta = ttValue - (v4 + v5 * (ss->ttPv && !PvNode)) * depth / 64;
               Depth singularDepth = (depth - 1) / 2;
 
               ss->excludedMove = move;
@@ -1058,11 +1059,11 @@ moves_loop: // When in check, search starts here
 
                   // Avoid search explosion by limiting the number of double extensions
                   if (  !PvNode
-                      && value < singularBeta - 21
-                      && ss->doubleExtensions <= 11)
+                      && value < singularBeta - v6
+                      && ss->doubleExtensions <= v7)
                   {
                       extension = 2;
-                      depth += depth < 13;
+                      depth += depth < v8;
                   }
               }
 
@@ -1080,7 +1081,7 @@ moves_loop: // When in check, search starts here
 
               // If we are on a cutNode, reduce it based on depth (negative extension) (~1 Elo)
               else if (cutNode)
-                  extension = depth < 17 ? -3 : -1;
+                  extension = depth < v9 ? -3 : -1;
 
               // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
               else if (ttValue <= value)
