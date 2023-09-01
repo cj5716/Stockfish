@@ -653,7 +653,7 @@ namespace {
         else if (    tte->depth() >= depth
                  && (tte->bound() & BOUND_UPPER)
                  &&  ttValue + 128 <= alpha)
-            return alpha;
+            return ttValue;
     }
 
     // Step 5. Tablebases probe
