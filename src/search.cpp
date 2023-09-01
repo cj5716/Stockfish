@@ -834,7 +834,7 @@ namespace {
     if (    cutNode
         &&  depth >= 8
         && !ttMove)
-        depth -= 2;
+        depth -= 2 + 3 * (ss->ttHit && tte->depth() >= depth + 3);
 
     probCutBeta = beta + 168 - 61 * improving;
 
