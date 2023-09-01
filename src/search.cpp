@@ -652,7 +652,7 @@ namespace {
         // still be accepted if it appears that failing low will trigger a research.
         else if (    tte->depth() >= depth
                  && (tte->bound() & BOUND_UPPER)
-                 &&  ttValue + 128 <= alpha)
+                 &&  ttValue + 256 <= alpha)
             return ttValue;
     }
 
