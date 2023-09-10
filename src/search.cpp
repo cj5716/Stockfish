@@ -1547,6 +1547,7 @@ moves_loop: // When in check, search starts here
                 if (moveCount > 2)
                     continue;
 
+                futilityBase = std::min(ss->staticEval, bestValue) + 200;
                 futilityValue = futilityBase + PieceValue[pos.piece_on(to_sq(move))];
 
                 if (futilityValue <= alpha)
