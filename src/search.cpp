@@ -636,9 +636,9 @@ namespace {
             {
                 if (ttCapture)
                 {
-                    if (tte->depth() < 7 && depth > 1 &&
+                    if (tte->depth() < 7 &&
                         thisThread->captureHistory[pos.moved_piece(ttMove)][to_sq(ttMove)][type_of(pos.piece_on(to_sq(ttMove)))] < -400)
-                        thisThread->captureHistory[pos.moved_piece(ttMove)][to_sq(ttMove)][type_of(pos.piece_on(to_sq(ttMove)))] << stat_bonus(depth);
+                        thisThread->captureHistory[pos.moved_piece(ttMove)][to_sq(ttMove)][type_of(pos.piece_on(to_sq(ttMove)))] << stat_bonus(tte->depth());
                 }
                 // Bonus for a quiet ttMove that fails high (~2 Elo)
                 else
