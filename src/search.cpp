@@ -46,7 +46,8 @@
 #include "uci.h"
 
 namespace Stockfish {
-
+int v1 = 1372, v2 = 512, v3 = 1073, v4 = 2057;
+TUNE(v1,v2,v3,v4);
 namespace Search {
 
   LimitsType Limits;
@@ -81,8 +82,7 @@ namespace {
 
   Depth reduction(bool i, Depth d, int mn, Value delta, Value rootDelta) {
     int reductionScale = Reductions[d] * Reductions[mn];
-    return  (reductionScale + 1372 - int(delta) * 1073 / int(rootDelta)) / 1024
-          + (!i && reductionScale > 936);
+    return (reductionScale + v1 + v2 * !i - v3 * int(delta) / int(rootDelta)) / 1024;
   }
 
   constexpr int futility_move_count(bool improving, Depth depth) {
@@ -172,7 +172,7 @@ namespace {
 void Search::init() {
 
   for (int i = 1; i < MAX_MOVES; ++i)
-      Reductions[i] = int((20.57 + std::log(Threads.size()) / 2) * std::log(i));
+      Reductions[i] = int((v4 / 100.0 + std::log(Threads.size()) / 2) * std::log(i));
 }
 
 
