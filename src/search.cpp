@@ -1097,7 +1097,7 @@ moves_loop: // When in check, search starts here
                   extension = -1;
           }
 
-          if (extension <= 1)
+          if (extension <= 0)
           {
               // Check extensions (~1 Elo)
               if (   givesCheck
