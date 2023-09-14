@@ -486,6 +486,15 @@ Bitboard Position::attackers_to(Square s, Bitboard occupied) const {
         | (attacks_bb<KING>(s)             & pieces(KING));
 }
 
+/// Position::defended() tests whether the resultant square of a
+/// move is defended.
+bool Position::defended(Move m) const {
+
+  assert(is_ok(m));
+
+  Square from = from_sq(m), to = to_sq(m);
+  return attackers_to(to, pieces() ^ from) & pieces(sideToMove);
+}
 
 /// Position::legal() tests whether a pseudo-legal move is legal
 
