@@ -133,8 +133,8 @@ namespace {
   void update_pv(Move* pv, Move move, const Move* childPv);
   void update_continuation_histories(Stack* ss, Piece pc, Square to, int bonus);
   void update_quiet_stats(const Position& pos, Stack* ss, Move move, int bonus);
-  void update_all_stats(const Position& pos, Stack* ss, Move bestMove, Value bestValue, Value beta, Square prevSq,
-                        Move* quietsSearched, int quietCount, Move* capturesSearched, int captureCount, Depth depth);
+  void update_all_stats(const Position& pos, Stack* ss, Move bestMove, Value bestValue, Value beta, Square prevSq, Move* quietsSearched,
+                        int quietCount, Move* capturesSearched, bool* defendedCaptures, int captureCount, bool bestMoveIsDefended, Depth depth);
 
   // perft() is our utility to verify move generation. All the leaf nodes up
   // to the given depth are generated and counted, and the sum is returned.
@@ -546,6 +546,7 @@ namespace {
     assert(!(PvNode && cutNode));
 
     Move pv[MAX_PLY+1], capturesSearched[32], quietsSearched[64];
+    bool defendedCaptures[32];
     StateInfo st;
     ASSERT_ALIGNED(&st, Eval::NNUE::CacheLineSize);
 
@@ -555,7 +556,7 @@ namespace {
     Depth extension, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool givesCheck, improving, priorCapture, singularQuietLMR;
-    bool capture, moveCountPruning, ttCapture;
+    bool capture, moveCountPruning, ttCapture, captureIsDefended, bestMoveIsDefended;
     Piece movedPiece;
     int moveCount, captureCount, quietCount;
 
@@ -969,6 +970,7 @@ moves_loop: // When in check, search starts here
       capture = pos.capture_stage(move);
       movedPiece = pos.moved_piece(move);
       givesCheck = pos.gives_check(move);
+      captureIsDefended = capture ? pos.defended(move) : false;
 
       // Calculate new depth for this move
       newDepth = depth - 1;
@@ -996,7 +998,7 @@ moves_loop: // When in check, search starts here
                   && lmrDepth < 7
                   && !ss->inCheck
                   && ss->staticEval + 197 + 248 * lmrDepth + PieceValue[pos.piece_on(to_sq(move))]
-                   + captureHistory[movedPiece][to_sq(move)][pos.defended(move)][type_of(pos.piece_on(to_sq(move)))] / 7 < alpha)
+                   + captureHistory[movedPiece][to_sq(move)][captureIsDefended][type_of(pos.piece_on(to_sq(move)))] / 7 < alpha)
                   continue;
 
               // SEE based pruning for captures and checks (~11 Elo)
@@ -1301,6 +1303,7 @@ moves_loop: // When in check, search starts here
           if (value > alpha)
           {
               bestMove = move;
+              bestMoveIsDefended = captureIsDefended;
 
               if (PvNode && !rootNode) // Update pv even in fail-high case
                   update_pv(ss->pv, move, (ss+1)->pv);
@@ -1331,7 +1334,10 @@ moves_loop: // When in check, search starts here
       if (move != bestMove)
       {
           if (capture && captureCount < 32)
-              capturesSearched[captureCount++] = move;
+          {
+              capturesSearched[captureCount] = move;
+              defendedCaptures[captureCount++] = captureIsDefended;
+          }
 
           else if (!capture && quietCount < 64)
               quietsSearched[quietCount++] = move;
@@ -1360,8 +1366,8 @@ moves_loop: // When in check, search starts here
 
     // If there is a move that produces search value greater than alpha we update the stats of searched moves
     else if (bestMove)
-        update_all_stats(pos, ss, bestMove, bestValue, beta, prevSq,
-                         quietsSearched, quietCount, capturesSearched, captureCount, depth);
+        update_all_stats(pos, ss, bestMove, bestValue, beta, prevSq, quietsSearched,
+                         quietCount, capturesSearched, defendedCaptures, captureCount, bestMoveIsDefended, depth);
 
     // Bonus for prior countermove that caused the fail low
     else if (!priorCapture && prevSq != SQ_NONE)
@@ -1708,8 +1714,8 @@ moves_loop: // When in check, search starts here
 
   // update_all_stats() updates stats at the end of search() when a bestMove is found
 
-  void update_all_stats(const Position& pos, Stack* ss, Move bestMove, Value bestValue, Value beta, Square prevSq,
-                        Move* quietsSearched, int quietCount, Move* capturesSearched, int captureCount, Depth depth) {
+  void update_all_stats(const Position& pos, Stack* ss, Move bestMove, Value bestValue, Value beta, Square prevSq, Move* quietsSearched,
+                        int quietCount, Move* capturesSearched, bool* defendedCaptures, int captureCount, bool bestMoveIsDefended, Depth depth) {
 
     Color us = pos.side_to_move();
     Thread* thisThread = pos.this_thread();
@@ -1738,7 +1744,7 @@ moves_loop: // When in check, search starts here
     {
         // Increase stats for the best move in case it was a capture move
         captured = type_of(pos.piece_on(to_sq(bestMove)));
-        captureHistory[moved_piece][to_sq(bestMove)][pos.defended(bestMove)][captured] << quietMoveBonus;
+        captureHistory[moved_piece][to_sq(bestMove)][bestMoveIsDefended][captured] << quietMoveBonus;
     }
 
     // Extra penalty for a quiet early move that was not a TT move or
@@ -1753,7 +1759,7 @@ moves_loop: // When in check, search starts here
     {
         moved_piece = pos.moved_piece(capturesSearched[i]);
         captured = type_of(pos.piece_on(to_sq(capturesSearched[i])));
-        captureHistory[moved_piece][to_sq(capturesSearched[i])][pos.defended(capturesSearched[i])][captured] << -quietMoveBonus;
+        captureHistory[moved_piece][to_sq(capturesSearched[i])][defendedCaptures[i]][captured] << -quietMoveBonus;
     }
   }
 
