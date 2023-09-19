@@ -1113,8 +1113,7 @@ moves_loop: // When in check, search starts here
 
           else if (   moveCount < 7
                    && (ss-1)->singular
-                   && (ss-2)->singular
-                   && (ss-3)->singular)
+                   && (ss-2)->singular)
               extension = 1;
       }
 
