@@ -1112,8 +1112,7 @@ moves_loop: // When in check, search starts here
               extension = 1;
 
           else if (   (ss-1)->singular
-                   && (ss-2)->singular
-                   && (ss-3)->singular)
+                   && (ss-2)->singular)
               extension = 1;
       }
 
