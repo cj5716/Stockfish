@@ -1111,8 +1111,7 @@ moves_loop: // When in check, search starts here
                    && (*contHist[0])[movedPiece][to_sq(move)] >= 5168)
               extension = 1;
 
-          else if (   moveCount < 7
-                   && (ss-1)->singular
+          else if (   (ss-1)->singular
                    && (ss-2)->singular
                    && (ss-3)->singular)
               extension = 1;
