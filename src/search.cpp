@@ -46,8 +46,7 @@
 #include "uci.h"
 
 namespace Stockfish {
-int v1 = 1372, v2 = 1073, v3 = 936, v4 = 2057, v5 = 4006, v6 = 11124, v7 = 4740;
-TUNE(v1,v2,v3,v4,v5,v6,v7);
+
 namespace Search {
 
   LimitsType Limits;
@@ -82,8 +81,8 @@ namespace {
 
   Depth reduction(bool i, Depth d, int mn, Value delta, Value rootDelta) {
     int reductionScale = Reductions[d] * Reductions[mn];
-    return  (reductionScale + v1 - int(delta) * v2 / int(rootDelta)) / 1024
-          + (!i && reductionScale > v3);
+    return  (reductionScale + 1466 - int(delta) * 1131 / int(rootDelta)) / 1024
+          + (!i && reductionScale > 944);
   }
 
   constexpr int futility_move_count(bool improving, Depth depth) {
@@ -173,7 +172,7 @@ namespace {
 void Search::init() {
 
   for (int i = 1; i < MAX_MOVES; ++i)
-      Reductions[i] = int((v4 / 100.0 + std::log(Threads.size()) / 2) * std::log(i));
+      Reductions[i] = int((19.75 + std::log(Threads.size()) / 2) * std::log(i));
 }
 
 
@@ -1172,10 +1171,10 @@ moves_loop: // When in check, search starts here
                      + (*contHist[1])[movedPiece][to_sq(move)]
                      + (*contHist[3])[movedPiece][to_sq(move)]
                      + (*contHist[5])[movedPiece][to_sq(move)]
-                     - v5;
+                     - 3929;
 
       // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
-      r -= ss->statScore / (v6 + v7 * (depth > 5 && depth < 22));
+      r -= ss->statScore / (12372 + 5131 * (depth > 5 && depth < 22));
 
       // Step 17. Late moves reduction / extension (LMR, ~117 Elo)
       // We use various heuristics for the sons of a node after the first son has
