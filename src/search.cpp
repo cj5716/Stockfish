@@ -1426,7 +1426,6 @@ moves_loop: // When in check, search starts here
     Value bestValue, value, ttValue, futilityValue, futilityBase;
     bool pvHit, givesCheck, capture;
     int moveCount;
-    Color us = pos.side_to_move();
 
     // Step 1. Initialize node
     if (PvNode)
@@ -1543,7 +1542,7 @@ moves_loop: // When in check, search starts here
             if (   !givesCheck
                 &&  to_sq(move) != prevSq
                 &&  futilityBase > VALUE_TB_LOSS_IN_MAX_PLY
-                &&  pos.non_pawn_material(us)
+                &&  pos.non_pawn_material()
                 &&  type_of(move) != PROMOTION)
             {
                 if (moveCount > 2)
