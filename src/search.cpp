@@ -1424,7 +1424,7 @@ moves_loop: // When in check, search starts here
     Move ttMove, move, bestMove;
     Depth ttDepth;
     Value bestValue, value, ttValue, futilityValue, futilityBase;
-    bool pvHit, givesCheck, capture;
+    bool pvHit, givesCheck, capture, lowPiececount;
     int moveCount;
 
     // Step 1. Initialize node
@@ -1519,6 +1519,7 @@ moves_loop: // When in check, search starts here
                                       prevSq);
 
     int quietCheckEvasions = 0;
+    lowPiececount = popcount(pos.pieces()) <= 6;
 
     // Step 5. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
@@ -1540,6 +1541,7 @@ moves_loop: // When in check, search starts here
         {
             // Futility pruning and moveCount pruning (~10 Elo)
             if (   !givesCheck
+                && !lowPiececount
                 &&  to_sq(move) != prevSq
                 &&  futilityBase > VALUE_TB_LOSS_IN_MAX_PLY
                 &&  type_of(move) != PROMOTION)
