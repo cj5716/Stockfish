@@ -52,7 +52,9 @@
 
 
 namespace Stockfish {
-
+int v1 = 32, v2 = 32, v3 = 32, v4 = 32, v5 = 64, v6 = 915, v7 = 9, v8 = 154, v9 = 0;
+TUNE(v1,v2,v3,v4,v5,v6,v7,v8);
+TUNE(SetRange(-10, 10), v9);
 namespace Eval {
 
   std::string currentEvalFileName = "None";
@@ -172,12 +174,12 @@ Value Eval::evaluate(const Position& pos) {
       Value optimism = pos.this_thread()->optimism[stm];
 
       // Blend optimism and eval with nnue complexity and material imbalance
-      optimism += optimism * (nnueComplexity + abs(simpleEval - nnue)) / 512;
-      nnue     -= nnue     * (nnueComplexity + abs(simpleEval - nnue)) / 32768;
+      optimism += optimism * (v1 * nnueComplexity + v2 * abs(simpleEval - nnue)) / 16384;
+      nnue     -= nnue     * (v3 * nnueComplexity + v4 * abs(simpleEval - nnue)) / 1048576;
 
-      int npm = pos.non_pawn_material() / 64;
-      v = (  nnue     * (915 + npm + 9 * pos.count<PAWN>())
-           + optimism * (154 + npm                       )) / 1024;
+      int npm = v5 * pos.non_pawn_material() / 4096;
+      v = (  nnue     * (v6 + npm + v7 * pos.count<PAWN>())
+           + optimism * (v8 + npm + v9 * pos.count<PAWN>())) / 1024;
   }
 
   // Damp down the evaluation linearly when shuffling
