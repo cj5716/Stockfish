@@ -766,9 +766,11 @@ namespace {
     // Step 7. Razoring (~1 Elo)
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
     // return a fail low.
-    if (eval < alpha - 456 - 252 * depth * depth)
+    if (   !PvNode
+        &&  eval < alpha - 352 - 635 * depth
+        &&  depth <= 6)
     {
-        value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
+        value = qsearch<NonPV>(pos, ss, alpha, beta);
         if (value < alpha)
             return value;
     }
