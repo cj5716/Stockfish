@@ -487,6 +487,14 @@ Bitboard Position::attackers_to(Square s, Bitboard occupied) const {
         | (attacks_bb<KING>(s)             & pieces(KING));
 }
 
+Bitboard Position::threats(Color c) const {
+
+    return attacks_by<PAWN>(c) | 
+           attacks_by<KNIGHT>(c) | 
+           attacks_by<BISHOP>(c) | 
+           attacks_by<ROOK>(c) | 
+           attacks_by<QUEEN>(c);
+}
 
 /// Position::legal() tests whether a pseudo-legal move is legal
 
@@ -1036,7 +1044,6 @@ Key Position::key_after(Move m) const {
   return (captured || type_of(pc) == PAWN)
       ? k : adjust_key50<true>(k);
 }
-
 
 /// Position::see_ge (Static Exchange Evaluation Greater or Equal) tests if the
 /// SEE value of move is greater or equal to the given threshold. We'll use an
