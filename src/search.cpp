@@ -557,6 +557,7 @@ namespace {
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool givesCheck, improving, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
+    bool failedRazor;
     Piece movedPiece;
     int moveCount, captureCount, quietCount;
 
@@ -568,6 +569,7 @@ namespace {
     moveCount          = captureCount = quietCount = ss->moveCount = 0;
     bestValue          = -VALUE_INFINITE;
     maxValue           = VALUE_INFINITE;
+    failedRazor        = false;
 
     // Check for the available remaining time
     if (thisThread == Threads.main())
@@ -771,6 +773,8 @@ namespace {
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
             return value;
+        else
+            failedRazor = true;
     }
 
     // Step 8. Futility pruning: child node (~40 Elo)
@@ -884,7 +888,7 @@ namespace {
 
                 // If the qsearch held, perform the regular search
                 if (value >= probCutBeta)
-                    value = -search<NonPV>(pos, ss+1, -probCutBeta, -probCutBeta+1, depth - 4, !cutNode);
+                    value = -search<NonPV>(pos, ss+1, -probCutBeta, -probCutBeta+1, depth - 4, failedRazor);
 
                 pos.undo_move(move);
 
