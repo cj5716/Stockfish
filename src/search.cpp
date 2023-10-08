@@ -1220,7 +1220,7 @@ moves_loop: // When in check, search starts here
                   update_continuation_histories(ss, movedPiece, to_sq(move), bonus);
 
               else
-                  captureHistory[movedPiece][to_sq(move)][type_of(pos.piece_on(to_sq(move)))] << bonus;
+                  captureHistory[movedPiece][to_sq(move)][type_of(pos.piece_on(to_sq(move)))] << bonus / 2;
           }
       }
 
