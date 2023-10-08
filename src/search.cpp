@@ -868,6 +868,12 @@ namespace {
     {
         assert(probCutBeta < VALUE_INFINITE);
 
+        if (   ttValue != VALUE_NONE
+            && ttCapture
+            && tte->depth() >= depth
+            && ttValue >= probCutBeta)
+            return probCutBeta;
+
         MovePicker mp(pos, ttMove, probCutBeta - ss->staticEval, &captureHistory);
 
         while ((move = mp.next_move()) != MOVE_NONE)
