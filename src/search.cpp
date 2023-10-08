@@ -554,7 +554,7 @@ namespace {
     Key posKey;
     Move ttMove, move, excludedMove, bestMove;
     Depth extension, newDepth;
-    Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
+    Value bestValue, value, ttValue, eval, maxValue, probCutBeta, probCutBestValue;
     bool givesCheck, improving, priorCapture, singularQuietLMR;
     bool capture, moveCountPruning, ttCapture;
     Piece movedPiece;
@@ -567,6 +567,7 @@ namespace {
     Color us           = pos.side_to_move();
     moveCount          = captureCount = quietCount = ss->moveCount = 0;
     bestValue          = -VALUE_INFINITE;
+    probCutBestValue   = -VALUE_INFINITE;
     maxValue           = VALUE_INFINITE;
 
     // Check for the available remaining time
@@ -892,14 +893,19 @@ namespace {
 
                 pos.undo_move(move);
 
-                if (value >= probCutBeta)
+                if (value > probCutBestValue)
                 {
-                    // Save ProbCut data into transposition table
-                    tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER, depth - 3, move, ss->staticEval);
-                    return value;
+                    probCutBestValue = value;
+                    if (value >= probCutBeta)
+                    {
+                        // Save ProbCut data into transposition table
+                        tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER, depth - 3, move, ss->staticEval);
+                        return value;
+                    }
                 }
             }
 
+        tte->save(posKey, value_to_tt(probCutBestValue, ss->ply), ss->ttPv, BOUND_UPPER, depth - 3, MOVE_NONE, ss->staticEval);
         Eval::NNUE::hint_common_parent_position(pos);
     }
 
