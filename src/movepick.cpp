@@ -144,7 +144,7 @@ void MovePicker::score() {
           Square    to   = to_sq(m);
 
           // histories
-          m.value =  3 * (*mainHistory)[pos.side_to_move()][bool(oppThreats & to)][from_to(m)];
+          m.value =  5 * (*mainHistory)[pos.side_to_move()][bool(oppThreats & to)][from_to(m)] / 2;
           m.value += 2 * (*continuationHistory[0])[pc][to];
           m.value +=     (*continuationHistory[1])[pc][to];
           m.value +=     (*continuationHistory[3])[pc][to];
