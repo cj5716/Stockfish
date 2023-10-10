@@ -92,7 +92,7 @@ namespace {
 
   // History and stats update bonus, based on depth
   int stat_bonus(Depth d) {
-    return std::min(334 * d - 531, 1538);
+    return std::min(352 * d - 535, 1414);
   }
 
   // Add a small random component to draw evaluations to avoid 3-fold blindness
@@ -753,7 +753,7 @@ namespace {
     // Use static evaluation difference to improve quiet move ordering (~4 Elo)
     if (is_ok((ss-1)->currentMove) && !(ss-1)->inCheck && !priorCapture)
     {
-        int bonus = std::clamp(-18 * int((ss-1)->staticEval + ss->staticEval), -1812, 1812);
+        int bonus = std::clamp(-16 * int((ss-1)->staticEval + ss->staticEval), -1854, 1854);
         thisThread->mainHistory[~us][(ss-1)->threatenedQuiet][from_to((ss-1)->currentMove)] << bonus;
     }
 
@@ -786,7 +786,7 @@ namespace {
         &&  eval < 29462 // smaller than TB wins
         && !(  !ttCapture
              && ttMove
-             && thisThread->mainHistory[us][bool(oppThreats & to_sq(ttMove))][from_to(ttMove)] < 989))
+             && thisThread->mainHistory[us][bool(oppThreats & to_sq(ttMove))][from_to(ttMove)] < 1024))
         return eval;
 
     // Step 9. Null move search with verification search (~35 Elo)
@@ -1181,7 +1181,7 @@ moves_loop: // When in check, search starts here
                      + (*contHist[0])[movedPiece][to_sq(move)]
                      + (*contHist[1])[movedPiece][to_sq(move)]
                      + (*contHist[3])[movedPiece][to_sq(move)]
-                     - 3848;
+                     - 3664;
 
       // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
       r -= ss->statScore / (10216 + 3855 * (depth > 5 && depth < 23));
