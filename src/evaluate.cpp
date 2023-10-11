@@ -163,7 +163,13 @@ Value Eval::evaluate(const Position& pos) {
                                  + abs(pos.this_thread()->rootSimpleEval);
 
   if (lazy)
-      v = Value(simpleEval);
+  {
+      v =   Value(  simpleEval
+                  + 6 * (popcount(pos.attacks_by<BISHOP>(stm)) - popcount(pos.attacks_by<BISHOP>(~stm)))
+                  + 5 * (popcount(pos.attacks_by<  ROOK>(stm)) - popcount(pos.attacks_by<  ROOK>(~stm)))
+                  + 3 * (popcount(pos.attacks_by< QUEEN>(stm)) - popcount(pos.attacks_by< QUEEN>(~stm)))
+                 );
+  }
   else
   {
       int nnueComplexity;
