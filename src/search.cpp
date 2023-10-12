@@ -46,8 +46,7 @@
 #include "uci.h"
 
 namespace Stockfish {
-int v1 = 334, v2 = 531, v3 = 1538, v4 = 18, v5 = 1812, v6 = 989, v7 = 3848;
-TUNE(v1,v2,v3,v4,v5,v6,v7);
+
 namespace Search {
 
   LimitsType Limits;
@@ -93,7 +92,7 @@ namespace {
 
   // History and stats update bonus, based on depth
   int stat_bonus(Depth d) {
-    return std::min(v1 * d - v2, v3);
+    return std::min(372 * d - 457, 1264);
   }
 
   // Add a small random component to draw evaluations to avoid 3-fold blindness
@@ -754,7 +753,7 @@ namespace {
     // Use static evaluation difference to improve quiet move ordering (~4 Elo)
     if (is_ok((ss-1)->currentMove) && !(ss-1)->inCheck && !priorCapture)
     {
-        int bonus = std::clamp(-v4 * int((ss-1)->staticEval + ss->staticEval), -v5, v5);
+        int bonus = std::clamp(-18 * int((ss-1)->staticEval + ss->staticEval), -1914, 1914);
         thisThread->mainHistory[~us][(ss-1)->threatenedQuiet][from_to((ss-1)->currentMove)] << bonus;
     }
 
@@ -787,7 +786,7 @@ namespace {
         &&  eval < 29462 // smaller than TB wins
         && !(  !ttCapture
              && ttMove
-             && thisThread->mainHistory[us][bool(oppThreats & to_sq(ttMove))][from_to(ttMove)] < v6))
+             && thisThread->mainHistory[us][bool(oppThreats & to_sq(ttMove))][from_to(ttMove)] < 1144))
         return eval;
 
     // Step 9. Null move search with verification search (~35 Elo)
@@ -1182,7 +1181,7 @@ moves_loop: // When in check, search starts here
                      + (*contHist[0])[movedPiece][to_sq(move)]
                      + (*contHist[1])[movedPiece][to_sq(move)]
                      + (*contHist[3])[movedPiece][to_sq(move)]
-                     - v7;
+                     - 3881;
 
       // Decrease/increase reduction for moves with a good/bad history (~25 Elo)
       r -= ss->statScore / (10216 + 3855 * (depth > 5 && depth < 23));
