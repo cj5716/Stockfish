@@ -555,8 +555,8 @@ namespace {
     Move ttMove, move, excludedMove, bestMove;
     Depth extension, newDepth;
     Value bestValue, value, ttValue, eval, maxValue, probCutBeta;
-    bool givesCheck, improving, priorCapture, singularQuietLMR;
-    bool capture, moveCountPruning, ttCapture;
+    bool ttHit, givesCheck, improving, priorCapture;
+    bool singularQuietLMR, capture, moveCountPruning, ttCapture;
     Piece movedPiece;
     int moveCount, captureCount, quietCount;
 
@@ -612,16 +612,17 @@ namespace {
     // Step 4. Transposition table lookup.
     excludedMove = ss->excludedMove;
     posKey = pos.key();
-    tte = TT.probe(posKey, ss->ttHit);
-    ttValue = ss->ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
+    tte = TT.probe(posKey, ttHit);
+    ttValue = ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
     ttMove =  rootNode ? thisThread->rootMoves[thisThread->pvIdx].pv[0]
-            : ss->ttHit    ? tte->move() : MOVE_NONE;
+            : ttHit    ? tte->move() : MOVE_NONE;
     ttCapture = ttMove && pos.capture_stage(ttMove);
+    ss->ttMovePresent = ttMove;
 
     // At this point, if excluded, skip straight to step 6, static eval. However,
     // to save indentation, we list the condition in all code between here and there.
     if (!excludedMove)
-        ss->ttPv = PvNode || (ss->ttHit && tte->is_pv());
+        ss->ttPv = PvNode || (ttHit && tte->is_pv());
 
     // At non-PV nodes we check for an early TT cutoff
     if (  !PvNode
@@ -726,7 +727,7 @@ namespace {
         Eval::NNUE::hint_common_parent_position(pos);
         eval = ss->staticEval;
     }
-    else if (ss->ttHit)
+    else if (ttHit)
     {
         // Never assume anything about values stored in TT
         ss->staticEval = eval = tte->eval();
@@ -778,7 +779,7 @@ namespace {
     // The depth condition is important for mate finding.
     if (   !ss->ttPv
         &&  depth < 9
-        &&  eval - futility_margin(depth, cutNode && !ss->ttHit, improving) - (ss-1)->statScore / 321 >= beta
+        &&  eval - futility_margin(depth, cutNode && !ttHit, improving) - (ss-1)->statScore / 321 >= beta
         &&  eval >= beta
         &&  eval < 29462 // smaller than TB wins
         && !(  !ttCapture
@@ -840,7 +841,7 @@ namespace {
     // Use qsearch if depth is equal or below zero (~9 Elo)
     if (    PvNode
         && !ttMove)
-        depth -= 2 + 2 * (ss->ttHit && tte->depth() >= depth);
+        depth -= 2 + 2 * (ttHit && tte->depth() >= depth);
 
     if (depth <= 0)
         return qsearch<PV>(pos, ss, alpha, beta);
@@ -1429,7 +1430,7 @@ moves_loop: // When in check, search starts here
     Move ttMove, move, bestMove;
     Depth ttDepth;
     Value bestValue, value, ttValue, futilityValue, futilityBase;
-    bool pvHit, givesCheck, capture;
+    bool ttHit, pvHit, givesCheck, capture;
     int moveCount;
     Color us = pos.side_to_move();
 
@@ -1460,10 +1461,11 @@ moves_loop: // When in check, search starts here
 
     // Step 3. Transposition table lookup
     posKey = pos.key();
-    tte = TT.probe(posKey, ss->ttHit);
-    ttValue = ss->ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
-    ttMove = ss->ttHit ? tte->move() : MOVE_NONE;
-    pvHit = ss->ttHit && tte->is_pv();
+    tte = TT.probe(posKey, ttHit);
+    ttValue = ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
+    ttMove = ttHit ? tte->move() : MOVE_NONE;
+    pvHit = ttHit && tte->is_pv();
+    ss->ttMovePresent = ttMove;
 
     // At non-PV nodes we check for an early TT cutoff
     if (  !PvNode
@@ -1477,7 +1479,7 @@ moves_loop: // When in check, search starts here
         bestValue = futilityBase = -VALUE_INFINITE;
     else
     {
-        if (ss->ttHit)
+        if (ttHit)
         {
             // Never assume anything about values stored in TT
             if ((ss->staticEval = bestValue = tte->eval()) == VALUE_NONE)
@@ -1497,7 +1499,7 @@ moves_loop: // When in check, search starts here
         if (bestValue >= beta)
         {
             // Save gathered info in transposition table
-            if (!ss->ttHit)
+            if (!ttHit)
                 tte->save(posKey, value_to_tt(bestValue, ss->ply), false, BOUND_LOWER,
                           DEPTH_NONE, MOVE_NONE, ss->staticEval);
 
@@ -1749,7 +1751,7 @@ moves_loop: // When in check, search starts here
     // Extra penalty for a quiet early move that was not a TT move or
     // main killer move in previous ply when it gets refuted.
     if (   prevSq != SQ_NONE
-        && ((ss-1)->moveCount == 1 + (ss-1)->ttHit || ((ss-1)->currentMove == (ss-1)->killers[0]))
+        && ((ss-1)->moveCount == 1 + (ss-1)->ttMovePresent || ((ss-1)->currentMove == (ss-1)->killers[0]))
         && !pos.captured_piece())
             update_continuation_histories(ss-1, pos.piece_on(prevSq), prevSq, -quietMoveBonus);
 
