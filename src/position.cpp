@@ -1053,16 +1053,20 @@ bool Position::see_ge(Move m, Value threshold) const {
   Square from = from_sq(m), to = to_sq(m);
 
   int swap;
+
   if (type_of(m) != PROMOTION)
       swap = PieceValue[piece_on(to)] - threshold;
-
   else
       swap = PieceValue[promotion_type(m)] - PieceValue[PAWN] - threshold;
 
   if (swap < 0)
       return false;
 
-  swap = PieceValue[piece_on(from)] - swap;
+  if (type_of(m) != PROMOTION)
+      swap = PieceValue[piece_on(from)] - swap;
+  else
+      swap = PieceValue[promotion_type(m)] - swap;
+
   if (swap <= 0)
       return true;
 
