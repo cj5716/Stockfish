@@ -1000,7 +1000,8 @@ moves_loop: // When in check, search starts here
               if (   !givesCheck
                   && lmrDepth < 7
                   && !ss->inCheck
-                  && ss->staticEval + 188 + 206 * lmrDepth + PieceValue[pos.piece_on(to_sq(move))]
+                  && ss->staticEval + 188 + 206 * lmrDepth + (type_of(move) != EN_PASSANT ? PieceValue[pos.piece_on(to_sq(move))]
+                                                                                          : PieceValue[PAWN])
                    + captureHistory[movedPiece][to_sq(move)][type_of(pos.piece_on(to_sq(move)))] / 7 < alpha)
                   continue;
 
@@ -1553,7 +1554,8 @@ moves_loop: // When in check, search starts here
                 if (moveCount > 2)
                     continue;
 
-                futilityValue = futilityBase + PieceValue[pos.piece_on(to_sq(move))];
+                futilityValue = futilityBase + (type_of(move) != EN_PASSANT ? PieceValue[pos.piece_on(to_sq(move))]
+                                                                            : PieceValue[PAWN]);
 
                 // If static eval + value of piece we are going to capture is much lower
                 // than alpha we can prune this move
