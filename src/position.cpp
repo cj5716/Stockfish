@@ -1052,20 +1052,19 @@ bool Position::see_ge(Move m, Value threshold) const {
 
   Square from = from_sq(m), to = to_sq(m);
 
-  int swap;
+  int swap = PieceValue[piece_on(to)] - threshold; // We capture the piece
 
-  if (type_of(m) != PROMOTION)
-      swap = PieceValue[piece_on(to)] - threshold;
-  else
-      swap = PieceValue[promotion_type(m)] - PieceValue[PAWN] - threshold;
+  // If it is a promotion, we gain the promoting piece and lose the pawn.
+  if (type_of(m) == PROMOTION)
+      swap += PieceValue[promotion_type(m)] - PieceValue[PAWN];
 
   if (swap < 0)
       return false;
 
   if (type_of(m) != PROMOTION)
-      swap = PieceValue[piece_on(from)] - swap;
+      swap = PieceValue[piece_on(from)] - swap; // Opponent recaptures. We lose the current piece.
   else
-      swap = PieceValue[promotion_type(m)] - swap;
+      swap = PieceValue[promotion_type(m)] - swap; // Opponent recaptures. We lose the promoting piece.
 
   if (swap <= 0)
       return true;
