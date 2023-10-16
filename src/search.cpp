@@ -896,7 +896,7 @@ namespace {
                 if (value >= probCutBeta)
                 {
                     // Update capture histories with current move
-                    if (thisThread->captureHistory[movedPiece][to_sq(move)][type_of(pos.piece_on(to_sq(move)))] < -500)
+                    if (depth > 4)
                         thisThread->captureHistory[movedPiece][to_sq(move)][type_of(pos.piece_on(to_sq(move)))] << stat_bonus(depth - 3);
 
                     // Save ProbCut data into transposition table
