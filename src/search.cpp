@@ -1646,12 +1646,16 @@ moves_loop: // When in check, search starts here
     // Step 9. Check for mate
     // All legal moves have been searched. A special case: if we're in check
     // and no legal moves were found, it is checkmate.
-    if (ss->inCheck && bestValue == -VALUE_INFINITE)
+    if (moveCount == 0)
     {
-        assert(excludedMove || !MoveList<LEGAL>(pos).size());
+        if (ss->inCheck)
+        {
+            assert(!MoveList<LEGAL>(pos).size());
 
-        return excludedMove ? alpha
-                            : mated_in(ss->ply); // Plies to mate from the root
+            return mated_in(ss->ply); // Plies to mate from the root
+        }
+        else if (excludedMove)
+            return alpha;
     }
 
     if (!excludedMove)
