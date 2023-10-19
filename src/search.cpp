@@ -1426,7 +1426,7 @@ moves_loop: // When in check, search starts here
 
     TTEntry* tte;
     Key posKey;
-    Move ttMove, move, bestMove;
+    Move ttMove, move, bestMove, excludedMove;
     Depth ttDepth;
     Value bestValue, value, ttValue, futilityValue, futilityBase;
     bool pvHit, givesCheck, capture;
@@ -1459,6 +1459,7 @@ moves_loop: // When in check, search starts here
                                                       : DEPTH_QS_NO_CHECKS;
 
     // Step 3. Transposition table lookup
+    excludedMove = ss->excludedMove;
     posKey = pos.key();
     tte = TT.probe(posKey, ss->ttHit);
     ttValue = ss->ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
@@ -1466,10 +1467,11 @@ moves_loop: // When in check, search starts here
     pvHit = ss->ttHit && tte->is_pv();
 
     // At non-PV nodes we check for an early TT cutoff
-    if (  !PvNode
-        && tte->depth() >= ttDepth
-        && ttValue != VALUE_NONE // Only in case of TT access race or if !ttHit
-        && (tte->bound() & (ttValue >= beta ? BOUND_LOWER : BOUND_UPPER)))
+    if (   !PvNode
+        && !excludedMove
+        &&  tte->depth() >= ttDepth
+        &&  ttValue != VALUE_NONE // Only in case of TT access race or if !ttHit
+        &&  (tte->bound() & (ttValue >= beta ? BOUND_LOWER : BOUND_UPPER)))
         return ttValue;
 
     // Step 4. Static evaluation of the position
@@ -1477,7 +1479,9 @@ moves_loop: // When in check, search starts here
         bestValue = futilityBase = -VALUE_INFINITE;
     else
     {
-        if (ss->ttHit)
+        if (excludedMove)
+            bestValue = ss->staticEval;
+        else if (ss->ttHit)
         {
             // Never assume anything about values stored in TT
             if ((ss->staticEval = bestValue = tte->eval()) == VALUE_NONE)
@@ -1534,6 +1538,9 @@ moves_loop: // When in check, search starts here
 
         // Check for legality
         if (!pos.legal(move))
+            continue;
+
+        if (move == excludedMove)
             continue;
 
         givesCheck = pos.gives_check(move);
@@ -1641,15 +1648,17 @@ moves_loop: // When in check, search starts here
     // and no legal moves were found, it is checkmate.
     if (ss->inCheck && bestValue == -VALUE_INFINITE)
     {
-        assert(!MoveList<LEGAL>(pos).size());
+        assert(excludedMove || !MoveList<LEGAL>(pos).size());
 
-        return mated_in(ss->ply); // Plies to mate from the root
+        return excludedMove ? alpha
+                            : mated_in(ss->ply); // Plies to mate from the root
     }
 
-    // Save gathered info in transposition table
-    tte->save(posKey, value_to_tt(bestValue, ss->ply), pvHit,
-              bestValue >= beta ? BOUND_LOWER : BOUND_UPPER,
-              ttDepth, bestMove, ss->staticEval);
+    if (!excludedMove)
+        // Save gathered info in transposition table
+        tte->save(posKey, value_to_tt(bestValue, ss->ply), pvHit,
+                  bestValue >= beta ? BOUND_LOWER : BOUND_UPPER,
+                  ttDepth, bestMove, ss->staticEval);
 
     assert(bestValue > -VALUE_INFINITE && bestValue < VALUE_INFINITE);
 
