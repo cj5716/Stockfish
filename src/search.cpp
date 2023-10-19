@@ -1465,11 +1465,12 @@ moves_loop: // When in check, search starts here
     ttMove = ss->ttHit ? tte->move() : MOVE_NONE;
     pvHit = ss->ttHit && tte->is_pv();
 
-    // At non-PV nodes we check for an early TT cutoff
-    if (  !PvNode
-        && tte->depth() >= ttDepth
+    // We check for an early TT cutoff
+    if (   tte->depth() >= ttDepth
         && ttValue != VALUE_NONE // Only in case of TT access race or if !ttHit
-        && (tte->bound() & (ttValue >= beta ? BOUND_LOWER : BOUND_UPPER)))
+        && (    tte->bound() == BOUND_EXACT
+            || (tte->bound() == BOUND_LOWER && ttValue >= beta)
+            || (tte->bound() == BOUND_UPPER && ttValue <= alpha)))
         return ttValue;
 
     // Step 4. Static evaluation of the position
