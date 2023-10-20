@@ -46,7 +46,7 @@
 #include "uci.h"
 
 namespace Stockfish {
-constexpr int v1 = 373, v2 = 486, v3 = 1175, v4 = 17, v5 = 1970, v6 = 1247, v7 = 3974;
+constexpr int v1 = 385, v2 = 498, v3 = 1224, v4 = 17, v5 = 1877, v6 = 1255, v7 = 3759;
 namespace Search {
 
   LimitsType Limits;
