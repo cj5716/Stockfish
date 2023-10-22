@@ -1094,7 +1094,7 @@ moves_loop: // When in check, search starts here
               else if (ttValue >= beta)
               {
                   extension = -2 - !PvNode;
-                  value = search<NonPV>(pos, ss, beta - 1, beta, singularDepth, cutNode);
+                  value = search<NonPV>(pos, ss, beta - 1, beta, singularDepth + extension, cutNode);
                   if (value >= beta)
                       return value;
               }
