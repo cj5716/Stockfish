@@ -1053,19 +1053,25 @@ moves_loop: // When in check, search starts here
           // scaling. Their values are optimized to time controls of 180+1.8 and longer
           // so changing them requires tests at this type of time controls.
           if (   !rootNode
-              &&  depth >= 4 - (thisThread->completedDepth > 24) + 2 * (PvNode && tte->is_pv())
               &&  move == ttMove
               && !excludedMove // Avoid recursive singular search
               &&  abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY
               && (tte->bound() & BOUND_LOWER)
               &&  tte->depth() >= depth - 3)
           {
+              bool multiCut = depth >= 4 - (thisThread->completedDepth > 24) + 2 * (PvNode && tte->is_pv());
+
               Value singularBeta = ttValue - (64 + 57 * (ss->ttPv && !PvNode)) * depth / 64;
               Depth singularDepth = (depth - 1) / 2;
 
-              ss->excludedMove = move;
-              value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
-              ss->excludedMove = MOVE_NONE;
+              if (multiCut)
+              {
+                  ss->excludedMove = move;
+                  value = search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
+                  ss->excludedMove = MOVE_NONE;
+              }
+              else
+                  value = eval;
 
               if (value < singularBeta)
               {
@@ -1074,6 +1080,7 @@ moves_loop: // When in check, search starts here
 
                   // Avoid search explosion by limiting the number of double extensions
                   if (  !PvNode
+                      && multiCut
                       && value < singularBeta - 18
                       && ss->doubleExtensions <= 11)
                   {
@@ -1087,20 +1094,23 @@ moves_loop: // When in check, search starts here
               // reduced search without the ttMove. So we assume this expected cut-node
               // is not singular, that multiple moves fail high, and we can prune the
               // whole subtree by returning a softbound.
-              else if (singularBeta >= beta)
-                  return singularBeta;
+              else if (multiCut)
+              {
+                  if (singularBeta >= beta)
+                      return singularBeta;
 
-              // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
-              else if (ttValue >= beta)
-                  extension = -2 - !PvNode;
+                  // If the eval of ttMove is greater than beta, we reduce it (negative extension) (~7 Elo)
+                  else if (ttValue >= beta)
+                      extension = -2 - !PvNode;
 
-              // If we are on a cutNode, reduce it based on depth (negative extension) (~1 Elo)
-              else if (cutNode)
-                  extension = depth < 19 ? -2 : -1;
+                  // If we are on a cutNode, reduce it based on depth (negative extension) (~1 Elo)
+                  else if (cutNode)
+                      extension = depth < 19 ? -2 : -1;
 
-              // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
-              else if (ttValue <= value)
-                  extension = -1;
+                  // If the eval of ttMove is less than value, we reduce it (negative extension) (~1 Elo)
+                  else if (ttValue <= value)
+                      extension = -1;
+              }
           }
 
           // Check extensions (~1 Elo)
