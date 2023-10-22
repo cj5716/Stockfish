@@ -1073,7 +1073,7 @@ moves_loop: // When in check, search starts here
                   singularQuietLMR = !ttCapture;
 
                   if (singularQuietLMR)
-                      update_quiet_stats(pos, ss, ttMove, stat_bonus(depth));
+                      thisThread->mainHistory[us][from_to(ttMove)] << stat_bonus(depth);
 
                   // Avoid search explosion by limiting the number of double extensions
                   if (  !PvNode
