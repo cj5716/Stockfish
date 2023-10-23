@@ -1031,10 +1031,14 @@ moves_loop:  // When in check, search starts here
             {
                 Value singularBeta  = ttValue - (64 + 57 * (ss->ttPv && !PvNode)) * depth / 64;
                 Depth singularDepth = (depth - 1) / 2;
+                Depth prelimDepth   = std::min((depth - 1) / 3, 1);
 
                 ss->excludedMove = move;
                 value =
-                  search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
+                  search<NonPV>(pos, ss, singularBeta - 1, singularBeta, prelimDepth, cutNode);
+                if (value < singularBeta && prelimDepth < singularDepth)
+                    value =
+                      search<NonPV>(pos, ss, singularBeta - 1, singularBeta, singularDepth, cutNode);
                 ss->excludedMove = MOVE_NONE;
 
                 if (value < singularBeta)
