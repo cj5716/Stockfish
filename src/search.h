@@ -50,7 +50,7 @@ struct Stack {
     bool            inCheck;
     bool            ttPv;
     bool            ttHit;
-    bool            threatenedQuiet;
+    bool            quietEscape;
     int             doubleExtensions;
     int             cutoffCnt;
 };

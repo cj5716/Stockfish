@@ -284,9 +284,9 @@ void MainThread::search() {
 
 void Thread::search() {
 
-    // Allocate stack with extra size to allow access from (ss-7) to (ss+2):
-    // (ss-7) is needed for update_continuation_histories(ss - 1) which accesses (ss-6),
-    // (ss+2) is needed for initialization of statScore and killers.
+    // Allocate stack with extra size to allow access from (ss - 7) to (ss + 2):
+    // (ss - 7) is needed for update_continuation_histories(ss - 1) which accesses (ss - 6),
+    // (ss + 2) is needed for initialization of statScore and killers.
     Stack       stack[MAX_PLY + 10], *ss = stack + 7;
     Move        pv[MAX_PLY + 1];
     Value       alpha, beta, delta;
@@ -650,7 +650,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
             else if (!ttCapture)
             {
                 int penalty = -stat_bonus(depth);
-                thisThread->mainHistory[us][bool(oppThreats & to_sq(ttMove))][from_to(ttMove)] << penalty;
+                thisThread->mainHistory[us][bool(oppThreats & from_sq(ttMove))][from_to(ttMove)] << penalty;
                 update_continuation_histories(ss, pos.moved_piece(ttMove), to_sq(ttMove), penalty);
             }
         }
@@ -751,7 +751,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     if (is_ok((ss - 1)->currentMove) && !(ss - 1)->inCheck && !priorCapture)
     {
         int bonus = std::clamp(-18 * int((ss - 1)->staticEval + ss->staticEval), -1812, 1812);
-        thisThread->mainHistory[~us][(ss - 1)->threatenedQuiet][from_to((ss - 1)->currentMove)] << bonus;
+        thisThread->mainHistory[~us][(ss - 1)->quietEscape][from_to((ss - 1)->currentMove)] << bonus;
     }
 
     // Set up the improving flag, which is true if current static evaluation is
@@ -797,7 +797,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
 
         ss->currentMove         = MOVE_NULL;
         ss->continuationHistory = &thisThread->continuationHistory[0][0][NO_PIECE][0];
-        ss->threatenedQuiet = false;
+        ss->quietEscape         = false;
 
         pos.do_null_move(st);
 
@@ -865,7 +865,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
                 ss->continuationHistory =
                   &thisThread
                      ->continuationHistory[ss->inCheck][true][pos.moved_piece(move)][to_sq(move)];
-                ss->threatenedQuiet = false;
+                ss->quietEscape = false;
 
                 pos.do_move(move, st);
 
@@ -951,11 +951,11 @@ moves_loop:  // When in check, search starts here
         if (PvNode)
             (ss + 1)->pv = nullptr;
 
-        extension  = 0;
-        capture    = pos.capture_stage(move);
-        movedPiece = pos.moved_piece(move);
-        givesCheck = pos.gives_check(move);
-        ss->threatenedQuiet = !capture && (oppThreats & to_sq(move));
+        extension       = 0;
+        capture         = pos.capture_stage(move);
+        movedPiece      = pos.moved_piece(move);
+        givesCheck      = pos.gives_check(move);
+        ss->quietEscape = !capture && (oppThreats & from_sq(move));
 
         // Calculate new depth for this move
         newDepth = depth - 1;
@@ -1000,7 +1000,7 @@ moves_loop:  // When in check, search starts here
                 if (lmrDepth < 6 && history < -3232 * depth)
                     continue;
 
-                history += 2 * thisThread->mainHistory[us][ss->threatenedQuiet][from_to(move)];
+                history += 2 * thisThread->mainHistory[us][ss->quietEscape][from_to(move)];
 
                 lmrDepth += history / 5793;
                 lmrDepth = std::max(lmrDepth, -2);
@@ -1138,7 +1138,7 @@ moves_loop:  // When in check, search starts here
         else if (move == ttMove)
             r--;
 
-        ss->statScore = 2 * thisThread->mainHistory[us][ss->threatenedQuiet][from_to(move)]
+        ss->statScore = 2 * thisThread->mainHistory[us][ss->quietEscape][from_to(move)]
                       + (*contHist[0])[movedPiece][to_sq(move)]
                       + (*contHist[1])[movedPiece][to_sq(move)]
                       + (*contHist[3])[movedPiece][to_sq(move)] - 3848;
@@ -1326,7 +1326,7 @@ moves_loop:  // When in check, search starts here
         int bonus = (depth > 6) + (PvNode || cutNode) + (bestValue < alpha - 653)
                   + ((ss - 1)->moveCount > 11);
         update_continuation_histories(ss-1, pos.piece_on(prevSq), prevSq, stat_bonus(depth) * bonus);
-        thisThread->mainHistory[~us][(ss - 1)->threatenedQuiet][from_to((ss - 1)->currentMove)] << stat_bonus(depth) * bonus / 2;
+        thisThread->mainHistory[~us][(ss - 1)->quietEscape][from_to((ss - 1)->currentMove)] << stat_bonus(depth) * bonus / 2;
     }
 
     if (PvNode)
@@ -1685,7 +1685,7 @@ void update_all_stats(const Position& pos,
         // Decrease stats for all non-best quiet moves
         for (int i = 0; i < quietCount; ++i)
         {
-            thisThread->mainHistory[us][bool(oppThreats & to_sq(quietsSearched[i]))][from_to(quietsSearched[i])] << -bestMoveBonus;
+            thisThread->mainHistory[us][bool(oppThreats & from_sq(quietsSearched[i]))][from_to(quietsSearched[i])] << -bestMoveBonus;
             update_continuation_histories(ss, pos.moved_piece(quietsSearched[i]),
                                           to_sq(quietsSearched[i]), -bestMoveBonus);
         }
@@ -1744,7 +1744,7 @@ void update_quiet_stats(const Position& pos, Stack* ss, Move move, Bitboard oppT
 
     Color   us         = pos.side_to_move();
     Thread* thisThread = pos.this_thread();
-    thisThread->mainHistory[us][bool(oppThreats & to_sq(move))][from_to(move)] << bonus;
+    thisThread->mainHistory[us][bool(oppThreats & from_sq(move))][from_to(move)] << bonus;
     update_continuation_histories(ss, pos.moved_piece(move), to_sq(move), bonus);
 
     // Update countermove history
