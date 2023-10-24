@@ -363,13 +363,14 @@ void Thread::search() {
             selDepth = 0;
 
             // Reset aspiration window starting size
-            Value avg = rootMoves[pvIdx].averageScore;
-            delta     = Value(10) + int(avg) * avg / 17470;
-            alpha     = std::max(avg - delta, -VALUE_INFINITE);
-            beta      = std::min(avg + delta, VALUE_INFINITE);
+            Value avg  = rootMoves[pvIdx].averageScore;
+            Value prev = rootMoves[pvIdx].previousScore;
+            delta      = Value(10) + int(avg) * avg / 17470;
+            alpha      = std::max(avg - delta, -VALUE_INFINITE);
+            beta       = std::min(avg + delta, VALUE_INFINITE);
 
             // Adjust optimism based on root move's averageScore (~4 Elo)
-            int opt       = 113 * avg / (std::abs(avg) + 109);
+            int opt       = 113 * prev / (std::abs(prev) + 109);
             optimism[us]  = Value(opt);
             optimism[~us] = -optimism[us];
 
