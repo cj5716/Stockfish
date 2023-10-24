@@ -279,10 +279,10 @@ void MainThread::search() {
 // consumed, the user stops the search, or the maximum search depth is reached.
 void Thread::search() {
 
-    // Allocate stack with extra size to allow access from (ss-7) to (ss+2):
-    // (ss-7) is needed for update_continuation_histories(ss-1) which accesses (ss-6),
-    // (ss+2) is needed for initialization of statScore and killers.
-    Stack       stack[MAX_PLY + 10], *ss = stack + 7;
+    // Allocate stack with extra size to allow access from (ss - 7) to (ss + 3):
+    // (ss - 7) is needed for update_continuation_histories(ss - 1) which accesses (ss - 6),
+    // (ss + 3) is needed for initialization of killers.
+    Stack       stack[MAX_PLY + 11], *ss = stack + 7;
     Move        pv[MAX_PLY + 1];
     Value       alpha, beta, delta;
     Move        lastBestMove      = MOVE_NONE;
@@ -292,7 +292,7 @@ void Thread::search() {
     Color       us      = rootPos.side_to_move();
     int         iterIdx = 0;
 
-    std::memset(ss - 7, 0, 10 * sizeof(Stack));
+    std::memset(ss - 7, 0, 11 * sizeof(Stack));
     for (int i = 7; i > 0; --i)
     {
         (ss - i)->continuationHistory =
@@ -300,7 +300,7 @@ void Thread::search() {
         (ss - i)->staticEval = VALUE_NONE;
     }
 
-    for (int i = 0; i <= MAX_PLY + 2; ++i)
+    for (int i = 0; i <= MAX_PLY + 3; ++i)
         (ss + i)->ply = i;
 
     ss->pv = pv;
@@ -598,7 +598,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
 
     (ss + 1)->excludedMove = bestMove = MOVE_NONE;
-    (ss + 2)->killers[0] = (ss + 2)->killers[1] = MOVE_NONE;
+    (ss + 3)->killers[0] = (ss + 3)->killers[1] = MOVE_NONE;
     (ss + 2)->cutoffCnt                         = 0;
     ss->doubleExtensions                        = (ss - 1)->doubleExtensions;
     Square prevSq = is_ok((ss - 1)->currentMove) ? to_sq((ss - 1)->currentMove) : SQ_NONE;
