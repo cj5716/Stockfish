@@ -1104,6 +1104,10 @@ moves_loop:  // When in check, search starts here
         if ((ss - 1)->moveCount > 7)
             r--;
 
+        // Decrease reduction if the current move is both the first killer and the countermove
+        if (move == ss->killers[0] && move == countermove)
+            r--;
+
         // Increase reduction for cut nodes (~3 Elo)
         if (cutNode)
             r += 2;
