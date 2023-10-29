@@ -1071,6 +1071,10 @@ moves_loop:  // When in check, search starts here
                 else if (singularBeta >= beta)
                     return singularBeta;
 
+                // If the result of singular search exceeds beta, reduce the ttMove as there are likely multiple moves that fail high.
+                else if (value >= beta)
+                    extension = -3;
+
                 // If the eval of ttMove is greater than beta, reduce it (negative extension) (~7 Elo)
                 else if (ttValue >= beta)
                     extension = -2 - !PvNode;
