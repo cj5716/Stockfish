@@ -869,10 +869,11 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
             {
                 assert(pos.capture_stage(move));
 
+                givesCheck      = pos.gives_check(move);
                 ss->currentMove = move;
                 ss->continuationHistory =
                   &thisThread
-                     ->continuationHistory[ss->inCheck][true][pos.moved_piece(move)][to_sq(move)];
+                     ->continuationHistory[givesCheck][true][pos.moved_piece(move)][to_sq(move)];
 
                 pos.do_move(move, st);
 
@@ -1106,7 +1107,7 @@ moves_loop:  // When in check, search starts here
         // Update the current move (this must be done after singular extension search)
         ss->currentMove = move;
         ss->continuationHistory =
-          &thisThread->continuationHistory[ss->inCheck][capture][movedPiece][to_sq(move)];
+          &thisThread->continuationHistory[givesCheck][capture][movedPiece][to_sq(move)];
 
         // Step 16. Make the move
         pos.do_move(move, st, givesCheck);
@@ -1556,8 +1557,7 @@ Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
         // Update the current move
         ss->currentMove = move;
         ss->continuationHistory =
-          &thisThread
-             ->continuationHistory[ss->inCheck][capture][pos.moved_piece(move)][to_sq(move)];
+          &thisThread->continuationHistory[givesCheck][capture][pos.moved_piece(move)][to_sq(move)];
 
         quietCheckEvasions += !capture && ss->inCheck;
 
