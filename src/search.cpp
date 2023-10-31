@@ -1100,8 +1100,9 @@ moves_loop:  // When in check, search starts here
         newDepth += extension;
         ss->doubleExtensions = (ss - 1)->doubleExtensions + (extension == 2);
 
-        // Speculative prefetch as early as possible
-        prefetch(TT.first_entry(pos.key_after(move)));
+        // Speculative prefetch as early as possible for normal moves
+        if (type_of(move) == NORMAL)
+            prefetch(TT.first_entry(pos.key_after(move)));
 
         // Update the current move (this must be done after singular extension search)
         ss->currentMove = move;
@@ -1110,6 +1111,10 @@ moves_loop:  // When in check, search starts here
 
         // Step 16. Make the move
         pos.do_move(move, st, givesCheck);
+
+        // Prefetch after we make the move for non-normal moves
+        if (type_of(move) != NORMAL)
+            prefetch(TT.first_entry(pos.key()));
 
         // Decrease reduction if position is or has been on the PV (~4 Elo)
         if (ss->ttPv && !likelyFailLow)
@@ -1550,8 +1555,9 @@ Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
                 continue;
         }
 
-        // Speculative prefetch as early as possible
-        prefetch(TT.first_entry(pos.key_after(move)));
+        // Speculative prefetch as early as possible for normal moves
+        if (type_of(move) == NORMAL)
+            prefetch(TT.first_entry(pos.key_after(move)));
 
         // Update the current move
         ss->currentMove = move;
@@ -1563,6 +1569,11 @@ Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
 
         // Step 7. Make and search the move
         pos.do_move(move, st, givesCheck);
+
+        // Prefetch after we make the move for non-normal moves
+        if (type_of(move) != NORMAL)
+            prefetch(TT.first_entry(pos.key()));
+
         value = -qsearch<nodeType>(pos, ss + 1, -beta, -alpha, depth - 1);
         pos.undo_move(move);
 
