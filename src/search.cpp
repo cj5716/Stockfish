@@ -556,7 +556,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     bool     givesCheck, improving, priorCapture, singularQuietLMR;
     bool     capture, moveCountPruning, ttCapture;
     Piece    movedPiece;
-    int      moveCount, captureCount, quietCount;
+    int      moveCount, captureCount, quietCount, pawnStructure;
 
     // Step 1. Initialize node
     Thread* thisThread = pos.this_thread();
@@ -566,6 +566,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     moveCount = captureCount = quietCount = ss->moveCount = 0;
     bestValue                                             = -VALUE_INFINITE;
     maxValue                                              = VALUE_INFINITE;
+    pawnStructure                                         = pawn_structure(pos);
 
     // Check for the available remaining time
     if (thisThread == Threads.main())
@@ -749,7 +750,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
         int bonus = std::clamp(-18 * int((ss - 1)->staticEval + ss->staticEval), -1812, 1812);
         thisThread->mainHistory[~us][from_to((ss - 1)->currentMove)] << bonus;
         if (type_of(pos.piece_on(prevSq)) != PAWN && type_of((ss - 1)->currentMove) != PROMOTION)
-            thisThread->pawnHistory[pawn_structure(pos)][pos.piece_on(prevSq)][prevSq] << bonus / 4;
+            thisThread->pawnHistory[pawnStructure][pos.piece_on(prevSq)][prevSq] << bonus / 4;
     }
 
     // Set up the improving flag, which is true if current static evaluation is
@@ -999,7 +1000,7 @@ moves_loop:  // When in check, search starts here
                 int history = (*contHist[0])[movedPiece][to_sq(move)]
                             + (*contHist[1])[movedPiece][to_sq(move)]
                             + (*contHist[3])[movedPiece][to_sq(move)]
-                            + thisThread->pawnHistory[pawn_structure(pos)][movedPiece][to_sq(move)];
+                            + thisThread->pawnHistory[pawnStructure][movedPiece][to_sq(move)];
 
                 // Continuation history based pruning (~2 Elo)
                 if (lmrDepth < 6 && history < -3645 * depth)
@@ -1154,7 +1155,8 @@ moves_loop:  // When in check, search starts here
         else if (move == ttMove)
             r = 0;
 
-        ss->statScore = 2 * thisThread->mainHistory[us][from_to(move)]
+        ss->statScore = thisThread->mainHistory[us][from_to(move)]
+                      + thisThread->pawnHistory[pawnStructure][movedPiece][to_sq(move)]
                       + (*contHist[0])[movedPiece][to_sq(move)]
                       + (*contHist[1])[movedPiece][to_sq(move)]
                       + (*contHist[3])[movedPiece][to_sq(move)] - 3848;
