@@ -976,16 +976,9 @@ void Position::do_null_move(StateInfo& newSt) {
     st->dirtyPiece.piece[0]         = NO_PIECE;  // Avoid checks in UpdateAccumulator()
     st->accumulator.computed[WHITE] = false;
     st->accumulator.computed[BLACK] = false;
-
-    if (st->epSquare != SQ_NONE)
-    {
-        st->key ^= Zobrist::enpassant[file_of(st->epSquare)];
-        st->epSquare = SQ_NONE;
-    }
-
-    st->key ^= Zobrist::side;
+    st->key                         = key_after_null();
+    st->epSquare                    = SQ_NONE;
     ++st->rule50;
-    prefetch(TT.first_entry(key()));
 
     st->pliesFromNull = 0;
 
@@ -1026,6 +1019,17 @@ Key Position::key_after(Move m) const {
     k ^= Zobrist::psq[pc][to] ^ Zobrist::psq[pc][from];
 
     return (captured || type_of(pc) == PAWN) ? k : adjust_key50<true>(k);
+}
+
+// Computes the zobrist key after a null move would be played.
+Key Position::key_after_null() const {
+
+    Key k = st->key ^ Zobrist::side;
+
+    if (st->epSquare != SQ_NONE)
+        k ^= Zobrist::enpassant[file_of(st->epSquare)];
+
+    return k;
 }
 
 

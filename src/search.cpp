@@ -790,6 +790,9 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     {
         assert(eval - beta >= 0);
 
+        // Prefetch the TT entry for the resulting position
+        prefetch(TT.first_entry(pos.key_after_null()));
+
         // Null move dynamic reduction based on depth and eval
         Depth R = std::min(int(eval - beta) / 152, 6) + depth / 3 + 4;
 
