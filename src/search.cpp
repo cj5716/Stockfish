@@ -985,7 +985,8 @@ moves_loop:  // When in check, search starts here
                     Piece capturedPiece = pos.piece_on(to_sq(move));
                     int   futilityEval =
                       ss->staticEval + 239 + 291 * lmrDepth + PieceValue[capturedPiece]
-                      + captureHistory[movedPiece][to_sq(move)][type_of(capturedPiece)] / 7;
+                      + captureHistory[ss->inCheck][movedPiece][to_sq(move)][type_of(capturedPiece)]
+                          / 7;
                     if (futilityEval < alpha)
                         continue;
                 }
@@ -1713,7 +1714,7 @@ void update_all_stats(const Position& pos,
     {
         // Increase stats for the best move in case it was a capture move
         captured = type_of(pos.piece_on(to_sq(bestMove)));
-        captureHistory[moved_piece][to_sq(bestMove)][captured] << quietMoveBonus;
+        captureHistory[ss->inCheck][moved_piece][to_sq(bestMove)][captured] << quietMoveBonus;
     }
 
     // Extra penalty for a quiet early move that was not a TT move or
@@ -1729,7 +1730,8 @@ void update_all_stats(const Position& pos,
     {
         moved_piece = pos.moved_piece(capturesSearched[i]);
         captured    = type_of(pos.piece_on(to_sq(capturesSearched[i])));
-        captureHistory[moved_piece][to_sq(capturesSearched[i])][captured] << -quietMoveMalus;
+        captureHistory[ss->inCheck][moved_piece][to_sq(capturesSearched[i])][captured]
+          << -quietMoveMalus;
     }
 }
 
