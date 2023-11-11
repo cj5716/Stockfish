@@ -798,7 +798,11 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
 
         pos.do_null_move(st);
 
-        Value nullValue = -search<NonPV>(pos, ss + 1, -beta, -beta + 1, depth - R, !cutNode);
+        // Perform a preliminary qsearch to verify that the null move observation holds
+        Value nullValue = -qsearch<NonPV>(pos, ss + 1, -beta, -beta + 1);
+
+        if (nullValue >= beta && depth > R)
+            nullValue = -search<NonPV>(pos, ss + 1, -beta, -beta + 1, depth - R, !cutNode);
 
         pos.undo_null_move();
 
