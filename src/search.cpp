@@ -855,6 +855,10 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     {
         assert(probCutBeta < VALUE_INFINITE);
 
+        if (ttValue != VALUE_NONE && tte->depth() >= depth - 3 && ttValue >= probCutBeta
+            && ttCapture)
+            return ttValue;
+
         MovePicker mp(pos, ttMove, probCutBeta - ss->staticEval, &captureHistory);
 
         while ((move = mp.next_move()) != MOVE_NONE)
