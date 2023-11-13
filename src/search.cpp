@@ -794,6 +794,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
         Depth R = std::min(int(eval - beta) / 152, 6) + depth / 3 + 4;
 
         ss->currentMove         = MOVE_NULL;
+        ss->capture             = false;
         ss->continuationHistory = &thisThread->continuationHistory[0][0][NO_PIECE][0];
 
         pos.do_null_move(st);
@@ -866,6 +867,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
                 prefetch(TT.first_entry(pos.key_after(move)));
 
                 ss->currentMove = move;
+                ss->capture     = true;
                 ss->continuationHistory =
                   &thisThread
                      ->continuationHistory[ss->inCheck][true][pos.moved_piece(move)][to_sq(move)];
@@ -910,8 +912,9 @@ moves_loop:  // When in check, search starts here
                                         nullptr,
                                         (ss - 6)->continuationHistory};
 
-    Move countermove =
-      prevSq != SQ_NONE ? thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] : MOVE_NONE;
+    Move countermove = prevSq != SQ_NONE
+                       ? thisThread->counterMoves[pos.piece_on(prevSq)][prevSq][(ss - 1)->capture]
+                       : MOVE_NONE;
 
     MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &captureHistory, contHist,
                   &thisThread->pawnHistory, countermove, ss->killers);
@@ -954,10 +957,10 @@ moves_loop:  // When in check, search starts here
         if (PvNode)
             (ss + 1)->pv = nullptr;
 
-        extension  = 0;
-        capture    = pos.capture_stage(move);
-        movedPiece = pos.moved_piece(move);
-        givesCheck = pos.gives_check(move);
+        extension   = 0;
+        ss->capture = capture = pos.capture_stage(move);
+        movedPiece            = pos.moved_piece(move);
+        givesCheck            = pos.gives_check(move);
 
         // Calculate new depth for this move
         newDepth = depth - 1;
@@ -1767,8 +1770,8 @@ void update_quiet_stats(const Position& pos, Stack* ss, Move move, int bonus) {
     // Update countermove history
     if (is_ok((ss - 1)->currentMove))
     {
-        Square prevSq                                          = to_sq((ss - 1)->currentMove);
-        thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] = move;
+        Square prevSq = to_sq((ss - 1)->currentMove);
+        thisThread->counterMoves[pos.piece_on(prevSq)][prevSq][(ss - 1)->capture] = move;
     }
 }
 
