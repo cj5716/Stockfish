@@ -554,7 +554,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, singularQuietLMR;
-    bool     capture, moveCountPruning, ttCapture;
+    bool     capture, moveCountPruning, ttCapture, inZugzwang;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
 
@@ -566,6 +566,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     moveCount = captureCount = quietCount = ss->moveCount = 0;
     bestValue                                             = -VALUE_INFINITE;
     maxValue                                              = VALUE_INFINITE;
+    inZugzwang                                            = false;
 
     // Check for the available remaining time
     if (thisThread == Threads.main())
@@ -820,6 +821,10 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
 
             if (v >= beta)
                 return nullValue;
+            else
+                // If our null move failed high but our verification search did not, assume
+                // we are in zugzwang.
+                inZugzwang = true;
         }
     }
 
@@ -1146,6 +1151,10 @@ moves_loop:  // When in check, search starts here
         // Decrease reduction if a quiet ttMove has been singularly extended (~1 Elo)
         if (singularQuietLMR)
             r--;
+
+        // Increase reduction if we are in a zugzwang (~10000 Elo)
+        if (inZugzwang)
+            r++;
 
         // Increase reduction on repetition (~1 Elo)
         if (move == (ss - 4)->currentMove && pos.has_repeated())
