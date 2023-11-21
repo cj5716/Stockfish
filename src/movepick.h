@@ -121,6 +121,10 @@ using ContinuationHistory = Stats<PieceToHistory, NOT_USED, PIECE_NB, SQUARE_NB>
 // PawnHistory is addressed by the pawn structure and a move's [piece][to]
 using PawnHistory = Stats<int16_t, 8192, PAWN_HISTORY_SIZE, PIECE_NB, SQUARE_NB>;
 
+// ExtensionHistory is addressed by a move's [piece][to] and keeps track of how successful
+// quiet TT moves are during the current search based on the resultant extensions.
+using ExtensionHistory = Stats<int16_t, 8192, PIECE_NB, SQUARE_NB>;
+
 // MovePicker class is used to pick one pseudo-legal move at a time from the
 // current position. The most important method is next_move(), which returns a
 // new pseudo-legal move each time it is called, until there are no moves left,
@@ -142,6 +146,7 @@ class MovePicker {
                Depth,
                const ButterflyHistory*,
                const CapturePieceToHistory*,
+               const ExtensionHistory*,
                const PieceToHistory**,
                const PawnHistory*,
                Move,
@@ -168,6 +173,7 @@ class MovePicker {
     const Position&              pos;
     const ButterflyHistory*      mainHistory;
     const CapturePieceToHistory* captureHistory;
+    const ExtensionHistory*      extensionHistory;
     const PieceToHistory**       continuationHistory;
     const PawnHistory*           pawnHistory;
     Move                         ttMove;

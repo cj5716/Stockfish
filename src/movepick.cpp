@@ -88,6 +88,7 @@ MovePicker::MovePicker(const Position&              p,
                        Depth                        d,
                        const ButterflyHistory*      mh,
                        const CapturePieceToHistory* cph,
+                       const ExtensionHistory*      eh,
                        const PieceToHistory**       ch,
                        const PawnHistory*           ph,
                        Move                         cm,
@@ -95,6 +96,7 @@ MovePicker::MovePicker(const Position&              p,
     pos(p),
     mainHistory(mh),
     captureHistory(cph),
+    extensionHistory(eh),
     continuationHistory(ch),
     pawnHistory(ph),
     ttMove(ttm),
@@ -187,6 +189,7 @@ void MovePicker::score() {
             m.value += (*continuationHistory[2])[pc][to] / 4;
             m.value += (*continuationHistory[3])[pc][to];
             m.value += (*continuationHistory[5])[pc][to];
+            m.value += (*extensionHistory)[pc][to] / 2;
 
             // bonus for checks
             m.value += bool(pos.check_squares(pt) & to) * 16384;

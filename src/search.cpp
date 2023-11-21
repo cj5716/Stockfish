@@ -912,8 +912,9 @@ moves_loop:  // When in check, search starts here
     Move countermove =
       prevSq != SQ_NONE ? thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] : MOVE_NONE;
 
-    MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &captureHistory, contHist,
-                  &thisThread->pawnHistory, countermove, ss->killers);
+    MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &captureHistory,
+                  &thisThread->extensionHistory, contHist, &thisThread->pawnHistory, countermove,
+                  ss->killers);
 
     value            = bestValue;
     moveCountPruning = singularQuietLMR = false;
@@ -1089,6 +1090,10 @@ moves_loop:  // When in check, search starts here
                 // If the ttMove is assumed to fail low over the value of the reduced search (~1 Elo)
                 else if (ttValue <= value)
                     extension = -1;
+
+                if (!ttCapture)
+                    thisThread->extensionHistory[movedPiece][to_sq(move)]
+                      << extension * stat_bonus(depth);
             }
 
             // Check extensions (~1 Elo)
