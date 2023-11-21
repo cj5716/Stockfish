@@ -874,6 +874,11 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
                 // Perform a preliminary qsearch to verify that the move holds
                 value = -qsearch<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1);
 
+                // If we are at high depth, perform another preliminary low-depth search first
+                if (depth >= 13 && value >= probCutBeta)
+                    value = -search<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1,
+                                           (depth - 4) / 2, !cutNode);
+
                 // If the qsearch held, perform the regular search
                 if (value >= probCutBeta)
                     value = -search<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1, depth - 4,
