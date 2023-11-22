@@ -46,7 +46,9 @@
 #include "uci.h"
 
 namespace Stockfish {
-
+int v1 = 660, v2 = 140, v3 = 60, v4 = 5380, v5 = 50, v6 = 150, v7 = 156, v8 = 69, v9 = 14,
+    v10 = 203, v11 = 179, v12 = 162, v13 = 148;
+TUNE(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13);
 namespace Search {
 
 LimitsType Limits;
@@ -469,18 +471,20 @@ void Thread::search() {
         // Do we have time for the next iteration? Can we stop searching now?
         if (Limits.use_time_management() && !Threads.stop && !mainThread->stopOnPonderhit)
         {
-            double fallingEval = (66 + 14 * (mainThread->bestPreviousAverageScore - bestValue)
-                                  + 6 * (mainThread->iterValue[iterIdx] - bestValue))
-                               / 583.0;
-            fallingEval = std::clamp(fallingEval, 0.5, 1.5);
+            double fallingEval = (v1 + v2 * (mainThread->bestPreviousAverageScore - bestValue)
+                                  + v3 * (mainThread->iterValue[iterIdx] - bestValue))
+                               / double(v4);
+            fallingEval = std::clamp(fallingEval, v5 / 100.0, v6 / 100.0);
 
             // If the bestMove is stable over several iterations, reduce time accordingly
-            timeReduction    = lastBestMoveDepth + 8 < completedDepth ? 1.56 : 0.69;
-            double reduction = (1.4 + mainThread->previousTimeReduction) / (2.03 * timeReduction);
-            double bestMoveInstability = 1 + 1.79 * totBestMoveChanges / Threads.size();
+            timeReduction = (lastBestMoveDepth + 8 < completedDepth ? v7 : v8) / 100.0;
+            double reduction =
+              (v9 / 10.0 + mainThread->previousTimeReduction) / (v10 * timeReduction / 100.0);
+            double bestMoveInstability = 1 + v11 * totBestMoveChanges / Threads.size() / 100.0;
             double bestMoveNodeFraction =
               double(rootMoves[0].nodesSpent) / double(mainThread->nodes);
-            double nodeScalingFactor = rootDepth > 7 ? (1.62 - bestMoveNodeFraction) * 1.48 : 1;
+            double nodeScalingFactor =
+              rootDepth > 7 ? (v12 / 100.0 - bestMoveNodeFraction) * v13 / 100.0 : 1;
 
             double totalTime =
               Time.optimum() * fallingEval * reduction * bestMoveInstability * nodeScalingFactor;
