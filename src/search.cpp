@@ -478,8 +478,12 @@ void Thread::search() {
             timeReduction    = lastBestMoveDepth + 8 < completedDepth ? 1.56 : 0.69;
             double reduction = (1.4 + mainThread->previousTimeReduction) / (2.03 * timeReduction);
             double bestMoveInstability = 1 + 1.79 * totBestMoveChanges / Threads.size();
+            double bestMoveNodeFraction =
+              double(rootMoves[0].nodesSpent) / double(mainThread->nodes);
+            double nodeScalingFactor = rootDepth > 7 ? (1.62 - bestMoveNodeFraction) * 1.48 : 1;
 
-            double totalTime = Time.optimum() * fallingEval * reduction * bestMoveInstability;
+            double totalTime =
+              Time.optimum() * fallingEval * reduction * bestMoveInstability * nodeScalingFactor;
 
             // Cap used time in case of a single legal move for a better viewer experience
             if (rootMoves.size() == 1)
@@ -557,6 +561,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     bool     capture, moveCountPruning, ttCapture;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
+    uint64_t nodesBeforeMove;
 
     // Step 1. Initialize node
     Thread* thisThread = pos.this_thread();
@@ -603,8 +608,9 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     (ss + 2)->killers[0] = (ss + 2)->killers[1] = MOVE_NONE;
     (ss + 2)->cutoffCnt                         = 0;
     ss->doubleExtensions                        = (ss - 1)->doubleExtensions;
-    Square prevSq = is_ok((ss - 1)->currentMove) ? to_sq((ss - 1)->currentMove) : SQ_NONE;
-    ss->statScore = 0;
+    Square prevSq   = is_ok((ss - 1)->currentMove) ? to_sq((ss - 1)->currentMove) : SQ_NONE;
+    ss->statScore   = 0;
+    nodesBeforeMove = 0;
 
     // Step 4. Transposition table lookup.
     excludedMove = ss->excludedMove;
@@ -1106,6 +1112,9 @@ moves_loop:  // When in check, search starts here
                           > 4000)
                 extension = 1;
         }
+        // Update nodes before search for (used for time management)
+        if (rootNode && thisThread == Threads.main())
+            nodesBeforeMove = thisThread->nodes;
 
         // Add extension to new depth
         newDepth += extension;
@@ -1245,6 +1254,9 @@ moves_loop:  // When in check, search starts here
 
             rm.averageScore =
               rm.averageScore != -VALUE_INFINITE ? (2 * value + rm.averageScore) / 3 : value;
+
+            if (thisThread == Threads.main())
+                rm.nodesSpent += thisThread->nodes - nodesBeforeMove;
 
             // PV move or new best move?
             if (moveCount == 1 || value > alpha)
