@@ -1287,7 +1287,7 @@ moves_loop:  // When in check, search starts here
         // Give a penalty in main history if the TT move fails to raise alpha
         // despite being extended.
         if (move == ttMove && singularQuiet && value <= alpha)
-            thisThread->mainHistory[us][from_to(move)] << -extension * stat_malus(depth);
+            thisThread->mainHistory[us][from_to(move)] << -(extension + PvNode) * stat_malus(depth);
 
         if (value > bestValue)
         {
