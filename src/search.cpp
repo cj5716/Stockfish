@@ -469,18 +469,18 @@ void Thread::search() {
         // Do we have time for the next iteration? Can we stop searching now?
         if (Limits.use_time_management() && !Threads.stop && !mainThread->stopOnPonderhit)
         {
-            double fallingEval = (66 + 14 * (mainThread->bestPreviousAverageScore - bestValue)
-                                  + 6 * (mainThread->iterValue[iterIdx] - bestValue))
-                               / 583.0;
-            fallingEval = std::clamp(fallingEval, 0.5, 1.5);
+            double fallingEval = (690 + 138 * (mainThread->bestPreviousAverageScore - bestValue)
+                                  + 58 * (mainThread->iterValue[iterIdx] - bestValue))
+                               / 5499.0;
+            fallingEval = std::clamp(fallingEval, 0.46, 1.46);
 
             // If the bestMove is stable over several iterations, reduce time accordingly
-            timeReduction    = lastBestMoveDepth + 8 < completedDepth ? 1.56 : 0.69;
-            double reduction = (1.4 + mainThread->previousTimeReduction) / (2.03 * timeReduction);
-            double bestMoveInstability = 1 + 1.79 * totBestMoveChanges / Threads.size();
+            timeReduction    = lastBestMoveDepth + 8 < completedDepth ? 1.51 : 0.73;
+            double reduction = (1.4 + mainThread->previousTimeReduction) / (2.18 * timeReduction);
+            double bestMoveInstability = 1 + 1.75 * totBestMoveChanges / Threads.size();
             double bestMoveNodeFraction =
               double(rootMoves[0].nodesSpent) / double(mainThread->nodes);
-            double nodeScalingFactor = rootDepth > 7 ? (1.62 - bestMoveNodeFraction) * 1.48 : 1;
+            double nodeScalingFactor = rootDepth > 7 ? (1.6 - bestMoveNodeFraction) * 1.45 : 1;
 
             double totalTime =
               Time.optimum() * fallingEval * reduction * bestMoveInstability * nodeScalingFactor;
