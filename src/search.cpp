@@ -478,9 +478,10 @@ void Thread::search() {
             timeReduction    = lastBestMoveDepth + 8 < completedDepth ? 1.56 : 0.69;
             double reduction = (1.4 + mainThread->previousTimeReduction) / (2.03 * timeReduction);
             double bestMoveInstability = 1 + 1.79 * totBestMoveChanges / Threads.size();
-            double bestMoveNodeFraction =
-              double(rootMoves[0].nodesSpent) / double(mainThread->nodes);
-            double nodeScalingFactor = rootDepth > 7 ? (1.62 - bestMoveNodeFraction) * 1.48 : 1;
+            double nonBestNodesFraction =
+              1.0 - double(rootMoves[0].nodesSpent) / double(mainThread->nodes);
+            double nodeScalingFactor =
+              rootDepth > 5 ? std::max(0.5464, nonBestNodesFraction * 2.1394 + 0.4393) : 1;
 
             double totalTime =
               Time.optimum() * fallingEval * reduction * bestMoveInstability * nodeScalingFactor;
