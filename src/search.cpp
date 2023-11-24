@@ -1056,10 +1056,11 @@ moves_loop:  // When in check, search starts here
                     extension        = 1;
                     singularQuietLMR = !ttCapture;
 
-                    // On expected cut-nodes, if current number of double extensions is low
-                    // and singular search fails low by an extremely large margin,
-                    // extend search by 3 plies.
-                    if (cutNode && value < singularBeta - 256 && ss->doubleExtensions <= 5)
+                    // For quiet TT moves with good countermove history, if current
+                    // number of double extensions is low and singular search fails
+                    // low by an extremely large margin, extend search by 3 plies.
+                    if (!PvNode && (*contHist[0])[movedPiece][to_sq(move)] >= 4194
+                        && value < singularBeta - 256 && ss->doubleExtensions <= 5)
                         extension = 3;
 
                     // Avoid search explosion by limiting the number of double extensions
