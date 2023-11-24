@@ -1056,12 +1056,18 @@ moves_loop:  // When in check, search starts here
                     extension        = 1;
                     singularQuietLMR = !ttCapture;
 
+                    // If current number of double extensions is low and singular search
+                    // fails low by an extremely large margin, extend search by 3 plies.
+                    if (!PvNode && value < singularBeta - 256 && ss->doubleExtensions <= 5)
+                        extension = 3;
+
                     // Avoid search explosion by limiting the number of double extensions
-                    if (!PvNode && value < singularBeta - 18 && ss->doubleExtensions <= 11)
-                    {
+                    else if (!PvNode && value < singularBeta - 18 && ss->doubleExtensions <= 11)
                         extension = 2;
+
+                    // Increment depth if we performed a double or triple extension
+                    if (extension >= 2)
                         depth += depth < 15;
-                    }
                 }
 
                 // Multi-cut pruning
@@ -1109,7 +1115,7 @@ moves_loop:  // When in check, search starts here
 
         // Add extension to new depth
         newDepth += extension;
-        ss->doubleExtensions = (ss - 1)->doubleExtensions + (extension == 2);
+        ss->doubleExtensions = (ss - 1)->doubleExtensions + (extension >= 2);
 
         // Speculative prefetch as early as possible
         prefetch(TT.first_entry(pos.key_after(move)));
