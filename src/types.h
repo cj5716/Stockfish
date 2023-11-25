@@ -83,7 +83,6 @@
     #endif
 
 namespace Stockfish {
-
     #ifdef USE_POPCNT
 constexpr bool HasPopCnt = true;
     #else
@@ -107,6 +106,7 @@ using Bitboard = uint64_t;
 
 constexpr int MAX_MOVES = 256;
 constexpr int MAX_PLY   = 246;
+
 
 // A move needs 16 bits to be stored
 //
@@ -172,35 +172,26 @@ enum Value : int {
     VALUE_TB_LOSS_IN_MAX_PLY = -VALUE_TB_WIN_IN_MAX_PLY,
     VALUE_MATE_IN_MAX_PLY    = VALUE_MATE - MAX_PLY,
     VALUE_MATED_IN_MAX_PLY   = -VALUE_MATE_IN_MAX_PLY,
-
-    // In the code, we make the assumption that these values
-    // are such that non_pawn_material() can be used to uniquely
-    // identify the material on the board.
-    PawnValue   = 208,
-    KnightValue = 781,
-    BishopValue = 825,
-    RookValue   = 1276,
-    QueenValue  = 2538,
 };
 
 // clang-format off
+
 enum PieceType {
     NO_PIECE_TYPE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING,
     ALL_PIECES = 0,
     PIECE_TYPE_NB = 8
 };
-
 enum Piece {
     NO_PIECE,
     W_PAWN = PAWN,     W_KNIGHT, W_BISHOP, W_ROOK, W_QUEEN, W_KING,
     B_PAWN = PAWN + 8, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING,
     PIECE_NB = 16
 };
-// clang-format on
 
-constexpr Value PieceValue[PIECE_NB] = {
-  VALUE_ZERO, PawnValue, KnightValue, BishopValue, RookValue, QueenValue, VALUE_ZERO, VALUE_ZERO,
-  VALUE_ZERO, PawnValue, KnightValue, BishopValue, RookValue, QueenValue, VALUE_ZERO, VALUE_ZERO};
+extern Value PawnValue, KnightValue, BishopValue, RookValue, QueenValue;
+
+extern Value PieceValue[PIECE_NB];
+// clang-format on
 
 using Depth = int;
 

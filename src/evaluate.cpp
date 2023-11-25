@@ -52,6 +52,21 @@ const unsigned int         gEmbeddedNNUESize    = 1;
 
 
 namespace Stockfish {
+int v1 = 915, v2 = 9, v3 = 154, v4 = 0, v5 = 200, v6 = 214;
+TUNE(v1);
+TUNE(SetRange(-10, 10), v2);
+TUNE(v3);
+TUNE(SetRange(-10, 10), v4);
+TUNE(v5, v6);
+
+int v7 = 208, v8 = 781, v9 = 825, v10 = 1276, v11 = 2538;
+TUNE(v7, v8, v9, v10, v11);
+Value PawnValue = Value(v7), KnightValue = Value(v8), BishopValue = Value(v9),
+      RookValue = Value(v10), QueenValue = Value(v11);
+
+Value PieceValue[PIECE_NB] = {
+  VALUE_ZERO, PawnValue, KnightValue, BishopValue, RookValue, QueenValue, VALUE_ZERO, VALUE_ZERO,
+  VALUE_ZERO, PawnValue, KnightValue, BishopValue, RookValue, QueenValue, VALUE_ZERO, VALUE_ZERO};
 
 namespace Eval {
 
@@ -182,11 +197,13 @@ Value Eval::evaluate(const Position& pos) {
         nnue -= nnue * (nnueComplexity + abs(simpleEval - nnue)) / 32768;
 
         int npm = pos.non_pawn_material() / 64;
-        v       = (nnue * (915 + npm + 9 * pos.count<PAWN>()) + optimism * (154 + npm)) / 1024;
+        v       = (nnue * (v1 + npm + v2 * pos.count<PAWN>())
+             + optimism * (v3 + npm + v4 * pos.count<PAWN>()))
+          / 1024;
     }
 
     // Damp down the evaluation linearly when shuffling
-    v = v * (200 - shuffling) / 214;
+    v = v * (v5 - shuffling) / v6;
 
     // Guarantee evaluation does not hit the tablebase range
     v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
