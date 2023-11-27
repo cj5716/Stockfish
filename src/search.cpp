@@ -1488,7 +1488,7 @@ Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
     // will be generated.
     Square     prevSq = is_ok((ss - 1)->currentMove) ? to_sq((ss - 1)->currentMove) : SQ_NONE;
     MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &thisThread->captureHistory,
-                  contHist, &thisThread->pawnHistory, prevSq);
+                  contHist, &thisThread->pawnHistory, prevSq, Value(-90));
 
     int quietCheckEvasions = 0;
 
@@ -1556,8 +1556,12 @@ Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
                 continue;
 
             // Do not search moves with bad enough SEE values (~5 Elo)
-            if (!pos.see_ge(move, Value(-90)))
-                continue;
+            if (mp.stage == QBAD_CAPTURE)
+            {
+                if (depth != DEPTH_QS_CHECKS)
+                    break;
+                mp.stage = QCHECK_INIT;
+            }
         }
 
         // Speculative prefetch as early as possible

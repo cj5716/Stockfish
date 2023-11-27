@@ -30,34 +30,6 @@ namespace Stockfish {
 
 namespace {
 
-enum Stages {
-    // generate main search moves
-    MAIN_TT,
-    CAPTURE_INIT,
-    GOOD_CAPTURE,
-    REFUTATION,
-    QUIET_INIT,
-    QUIET,
-    BAD_CAPTURE,
-
-    // generate evasion moves
-    EVASION_TT,
-    EVASION_INIT,
-    EVASION,
-
-    // generate probcut moves
-    PROBCUT_TT,
-    PROBCUT_INIT,
-    PROBCUT,
-
-    // generate qsearch moves
-    QSEARCH_TT,
-    QCAPTURE_INIT,
-    QCAPTURE,
-    QCHECK_INIT,
-    QCHECK
-};
-
 // Sort moves in descending order up to and including
 // a given limit. The order of moves smaller than the limit is left unspecified.
 void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
@@ -113,15 +85,17 @@ MovePicker::MovePicker(const Position&              p,
                        const CapturePieceToHistory* cph,
                        const PieceToHistory**       ch,
                        const PawnHistory*           ph,
-                       Square                       rs) :
+                       Square                       rs,
+                       Value                        th) :
     pos(p),
+    depth(d),
     mainHistory(mh),
     captureHistory(cph),
     continuationHistory(ch),
     pawnHistory(ph),
     ttMove(ttm),
     recaptureSquare(rs),
-    depth(d) {
+    threshold(th) {
     assert(d <= 0);
 
     stage = (pos.checkers() ? EVASION_TT : QSEARCH_TT) + !(ttm && pos.pseudo_legal(ttm));
@@ -339,10 +313,25 @@ top:
     case PROBCUT :
         return select<Next>([&]() { return pos.see_ge(*cur, threshold); });
 
-    case QCAPTURE :
-        if (select<Next>(
-              [&]() { return depth > DEPTH_QS_RECAPTURES || to_sq(*cur) == recaptureSquare; }))
+    case QGOOD_CAPTURE :
+        if (select<Next>([&]() {
+                return depth > DEPTH_QS_RECAPTURES || to_sq(*cur) == recaptureSquare
+                       ? pos.see_ge(*cur, threshold) ? true : (*endBadCaptures++ = *cur, false)
+                       : false;
+            }))
             return *(cur - 1);
+
+        // Prepare the pointers to loop over the bad captures
+        cur      = moves;
+        endMoves = endBadCaptures;
+
+        ++stage;
+        [[fallthrough]];
+
+    case QBAD_CAPTURE :
+
+        return select<Next>(
+          [&]() { return depth > DEPTH_QS_RECAPTURES || to_sq(*cur) == recaptureSquare; });
 
         // If we did not find any move and we do not try checks, we have finished
         if (depth != DEPTH_QS_CHECKS)

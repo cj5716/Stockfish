@@ -214,6 +214,37 @@ enum : int {
     DEPTH_OFFSET = -7  // value used only for TT entry occupancy check
 };
 
+// Movepicker stages
+enum Stages {
+    // generate main search moves
+    MAIN_TT,
+    CAPTURE_INIT,
+    GOOD_CAPTURE,
+    REFUTATION,
+    QUIET_INIT,
+    QUIET,
+    BAD_CAPTURE,
+
+    // generate evasion moves
+    EVASION_TT,
+    EVASION_INIT,
+    EVASION,
+
+    // generate probcut moves
+    PROBCUT_TT,
+    PROBCUT_INIT,
+    PROBCUT,
+
+    // generate qsearch moves
+    QSEARCH_TT,
+    QCAPTURE_INIT,
+    QGOOD_CAPTURE,
+    QBAD_CAPTURE,
+    QCHECK_INIT,
+    QCHECK
+};
+
+
 // clang-format off
 enum Square : int {
     SQ_A1, SQ_B1, SQ_C1, SQ_D1, SQ_E1, SQ_F1, SQ_G1, SQ_H1,

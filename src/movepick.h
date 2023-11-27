@@ -135,6 +135,7 @@ class MovePicker {
     };
 
    public:
+    int stage;
     MovePicker(const MovePicker&)            = delete;
     MovePicker& operator=(const MovePicker&) = delete;
     MovePicker(const Position&,
@@ -153,7 +154,8 @@ class MovePicker {
                const CapturePieceToHistory*,
                const PieceToHistory**,
                const PawnHistory*,
-               Square);
+               Square,
+               Value);
     MovePicker(const Position&, Move, Value, const CapturePieceToHistory*);
     Move next_move(bool skipQuiets = false);
 
@@ -172,7 +174,6 @@ class MovePicker {
     const PawnHistory*           pawnHistory;
     Move                         ttMove;
     ExtMove                      refutations[3], *cur, *endMoves, *endBadCaptures;
-    int                          stage;
     Square                       recaptureSquare;
     Value                        threshold;
     Depth                        depth;
