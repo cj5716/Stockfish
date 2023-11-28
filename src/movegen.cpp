@@ -204,10 +204,10 @@ ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, const Squar
         if (relative_rank(Us, sq) == RANK_8)
         {
             if (shift<DownRight>(RecapBB) & ourPawns)
-                *moveList++ = make<PROMOTION>(sq - UpLeft, sq, QUEEN);
+                moveList = make_promotions<CAPTURES, UpLeft, true>(moveList, sq);
 
             if (shift<DownLeft>(RecapBB) & ourPawns)
-                *moveList++ = make<PROMOTION>(sq - UpRight, sq, QUEEN);
+                moveList = make_promotions<CAPTURES, UpRight, true>(moveList, sq);
         }
         else
         {
