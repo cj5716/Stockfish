@@ -53,7 +53,7 @@ struct ExtMove {
 inline bool operator<(const ExtMove& f, const ExtMove& s) { return f.value < s.value; }
 
 template<GenType>
-ExtMove* generate(const Position& pos, ExtMove* moveList, Square recapSq);
+ExtMove* generate(const Position& pos, ExtMove* moveList, Square recapSq = SQ_NONE);
 
 // The MoveList struct wraps the generate() function and returns a convenient
 // list of moves. Using MoveList is sometimes preferable to directly calling
@@ -62,7 +62,7 @@ template<GenType T>
 struct MoveList {
 
     explicit MoveList(const Position& pos) :
-        last(generate<T>(pos, moveList, SQ_NONE)) {}
+        last(generate<T>(pos, moveList)) {}
     const ExtMove* begin() const { return moveList; }
     const ExtMove* end() const { return last; }
     size_t         size() const { return last - moveList; }

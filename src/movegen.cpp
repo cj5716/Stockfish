@@ -113,10 +113,6 @@ ExtMove* generate_pawn_moves(const Position& pos, ExtMove* moveList, Bitboard ta
     {
         Bitboard b1 = shift<UpRight>(pawnsOn7) & enemies;
         Bitboard b2 = shift<UpLeft>(pawnsOn7) & enemies;
-        Bitboard b3 = Type == RECAPTURES ? 0 : shift<Up>(pawnsOn7) & emptySquares;
-
-        if constexpr (Type == EVASIONS)
-            b3 &= target;
 
         while (b1)
             moveList = make_promotions<Type, UpRight, true>(moveList, pop_lsb(b1));
@@ -124,8 +120,16 @@ ExtMove* generate_pawn_moves(const Position& pos, ExtMove* moveList, Bitboard ta
         while (b2)
             moveList = make_promotions<Type, UpLeft, true>(moveList, pop_lsb(b2));
 
-        while (b3)
-            moveList = make_promotions<Type, Up, false>(moveList, pop_lsb(b3));
+        if constexpr (Type != RECAPTURES)
+        {
+            Bitboard b3 = shift<Up>(pawnsOn7) & emptySquares;
+
+            if constexpr (Type == EVASIONS)
+                b3 &= target;
+
+            while (b3)
+                moveList = make_promotions<Type, Up, false>(moveList, pop_lsb(b3));
+        }
     }
 
     // Standard and en passant captures
