@@ -258,7 +258,6 @@ top:
 
     case CAPTURE_INIT :
     case PROBCUT_INIT :
-    case QCAPTURE_INIT :
         cur = endBadCaptures = moves;
         endMoves             = generate<CAPTURES>(pos, cur);
 
@@ -338,6 +337,25 @@ top:
 
     case PROBCUT :
         return select<Next>([&]() { return pos.see_ge(*cur, threshold); });
+
+    case QCAPTURE_INIT :
+
+        // If a recapture is impossible, skip this step and go straight to quiet checks if applicable.
+        if (depth <= DEPTH_QS_RECAPTURES && recaptureSquare == SQ_NONE)
+        {
+            if (depth != DEPTH_QS_CHECKS)
+                return MOVE_NONE;
+            else
+                stage = QCHECK_INIT;
+        }
+
+        cur = endBadCaptures = moves;
+        endMoves             = generate<CAPTURES>(pos, cur);
+
+        score<CAPTURES>();
+        partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
+        ++stage;
+        [[fallthrough]];
 
     case QCAPTURE :
         if (select<Next>(
