@@ -258,6 +258,9 @@ ExtMove* generate(const Position& pos, ExtMove* moveList, [[maybe_unused]] Squar
     static_assert(Type != LEGAL, "Unsupported type in generate()");
     assert((Type == EVASIONS) == bool(pos.checkers()));
 
+    if (Type == RECAPTURES && recapSq == SQ_NONE)
+        return moveList;
+
     Color us = pos.side_to_move();
 
     return us == WHITE ? generate_all<WHITE, Type>(pos, moveList, recapSq)
