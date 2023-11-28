@@ -31,10 +31,11 @@ namespace {
 template<GenType Type, Direction D, bool Enemy>
 ExtMove* make_promotions(ExtMove* moveList, [[maybe_unused]] Square to) {
 
-    if constexpr (Type == CAPTURES || Type == EVASIONS || Type == NON_EVASIONS)
+    if constexpr (Type == CAPTURES || Type == RECAPTURES || Type == EVASIONS
+                  || Type == NON_EVASIONS)
     {
         *moveList++ = make<PROMOTION>(to - D, to, QUEEN);
-        if constexpr (Enemy && Type == CAPTURES)
+        if constexpr (Enemy && (Type == CAPTURES || Type == RECAPTURES))
         {
             *moveList++ = make<PROMOTION>(to - D, to, ROOK);
             *moveList++ = make<PROMOTION>(to - D, to, BISHOP);
@@ -187,50 +188,8 @@ ExtMove* generate_moves(const Position& pos, ExtMove* moveList, Bitboard target)
     return moveList;
 }
 
-// Specialized function for recaptures(when depth <= DEPTH_QS_RECAPTURES)
-template<Color Us>
-ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, const Square sq) {
-
-    constexpr Direction DownRight = (Us == WHITE ? SOUTH_EAST : NORTH_WEST);
-    constexpr Direction DownLeft  = (Us == WHITE ? SOUTH_WEST : NORTH_EAST);
-    constexpr Bitboard  UsRank1BB = (Us == WHITE ? Rank1BB : Rank8BB);
-    const Bitboard      RecapBB   = square_bb(sq);
-    const Bitboard      ourPawns  = pos.pieces(Us, PAWN);
-
-    // Impossible for any pawns to capture on first rank
-    if (ourPawns & ~UsRank1BB)
-    {
-        const bool recapOnRank8 = relative_rank(Us, sq) == RANK_8;
-
-        // If recapture square is at rank 8, we generate pawn promotions
-        if (shift<DownRight>(RecapBB) & ourPawns)
-            *moveList++ = recapOnRank8 ? make<PROMOTION>(sq + DownRight, sq, QUEEN)
-                                       : make_move(sq + DownRight, sq);
-
-        if (shift<DownLeft>(RecapBB) & ourPawns)
-            *moveList++ = recapOnRank8 ? make<PROMOTION>(sq + DownLeft, sq, QUEEN)
-                                       : make_move(sq + DownLeft, sq);
-    }
-
-    for (PieceType pt = KNIGHT; pt <= KING; ++pt)
-    {
-        Bitboard ourPiece = pos.pieces(Us, pt);
-        if (ourPiece)
-        {
-            Bitboard pieceAttacks = attacks_bb(pt, sq, pos.pieces()) & ourPiece;
-            while (pieceAttacks)
-            {
-                Square from = pop_lsb(pieceAttacks);
-                *moveList++ = make_move(from, sq);
-            }
-        }
-    }
-
-    return moveList;
-}
-
 template<Color Us, GenType Type>
-ExtMove* generate_all(const Position& pos, ExtMove* moveList) {
+ExtMove* generate_all(const Position& pos, ExtMove* moveList, Square recapSq) {
 
     static_assert(Type != LEGAL, "Unsupported type in generate_all()");
 
@@ -244,6 +203,7 @@ ExtMove* generate_all(const Position& pos, ExtMove* moveList) {
         target = Type == EVASIONS     ? between_bb(ksq, lsb(pos.checkers()))
                : Type == NON_EVASIONS ? ~pos.pieces(Us)
                : Type == CAPTURES     ? pos.pieces(~Us)
+               : Type == RECAPTURES   ? recapSq
                                       : ~pos.pieces();  // QUIETS || QUIET_CHECKS
 
         moveList = generate_pawn_moves<Us, Type>(pos, moveList, target);
@@ -273,54 +233,48 @@ ExtMove* generate_all(const Position& pos, ExtMove* moveList) {
 
 }  // namespace
 
-ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, Square sq) {
-
-    Color us = pos.side_to_move();
-
-    return us == WHITE ? generate_recaptures<WHITE>(pos, moveList, sq)
-                       : generate_recaptures<BLACK>(pos, moveList, sq);
-}
-
 // <CAPTURES>     Generates all pseudo-legal captures plus queen promotions
 // <QUIETS>       Generates all pseudo-legal non-captures and underpromotions
 // <EVASIONS>     Generates all pseudo-legal check evasions
 // <NON_EVASIONS> Generates all pseudo-legal captures and non-captures
 // <QUIET_CHECKS> Generates all pseudo-legal non-captures giving check,
 //                except castling and promotions
+// <RECAPTURES>   Generates all pseudo-legal captures towards a certain square
 //
 // Returns a pointer to the end of the move list.
 template<GenType Type>
-ExtMove* generate(const Position& pos, ExtMove* moveList) {
+ExtMove* generate(const Position& pos, ExtMove* moveList, [[maybe_unused]] Square recapSq) {
 
     static_assert(Type != LEGAL, "Unsupported type in generate()");
     assert((Type == EVASIONS) == bool(pos.checkers()));
 
     Color us = pos.side_to_move();
 
-    return us == WHITE ? generate_all<WHITE, Type>(pos, moveList)
-                       : generate_all<BLACK, Type>(pos, moveList);
+    return us == WHITE ? generate_all<WHITE, Type>(pos, moveList, recapSq)
+                       : generate_all<BLACK, Type>(pos, moveList, recapSq);
 }
 
 // Explicit template instantiations
-template ExtMove* generate<CAPTURES>(const Position&, ExtMove*);
-template ExtMove* generate<QUIETS>(const Position&, ExtMove*);
-template ExtMove* generate<EVASIONS>(const Position&, ExtMove*);
-template ExtMove* generate<QUIET_CHECKS>(const Position&, ExtMove*);
-template ExtMove* generate<NON_EVASIONS>(const Position&, ExtMove*);
+template ExtMove* generate<CAPTURES>(const Position&, ExtMove*, Square);
+template ExtMove* generate<QUIETS>(const Position&, ExtMove*, Square);
+template ExtMove* generate<EVASIONS>(const Position&, ExtMove*, Square);
+template ExtMove* generate<QUIET_CHECKS>(const Position&, ExtMove*, Square);
+template ExtMove* generate<NON_EVASIONS>(const Position&, ExtMove*, Square);
+template ExtMove* generate<RECAPTURES>(const Position&, ExtMove*, Square);
 
 
 // generate<LEGAL> generates all the legal moves in the given position
 
 template<>
-ExtMove* generate<LEGAL>(const Position& pos, ExtMove* moveList) {
+ExtMove* generate<LEGAL>(const Position& pos, ExtMove* moveList, [[maybe_unused]] Square recapSq) {
 
     Color    us     = pos.side_to_move();
     Bitboard pinned = pos.blockers_for_king(us) & pos.pieces(us);
     Square   ksq    = pos.square<KING>(us);
     ExtMove* cur    = moveList;
 
-    moveList =
-      pos.checkers() ? generate<EVASIONS>(pos, moveList) : generate<NON_EVASIONS>(pos, moveList);
+    moveList = pos.checkers() ? generate<EVASIONS>(pos, moveList, recapSq)
+                              : generate<NON_EVASIONS>(pos, moveList, recapSq);
     while (cur != moveList)
         if (((pinned & from_sq(*cur)) || from_sq(*cur) == ksq || type_of(*cur) == EN_PASSANT)
             && !pos.legal(*cur))

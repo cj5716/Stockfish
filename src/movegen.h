@@ -34,6 +34,7 @@ enum GenType {
     QUIET_CHECKS,
     EVASIONS,
     NON_EVASIONS,
+    RECAPTURES,
     LEGAL
 };
 
@@ -52,9 +53,7 @@ struct ExtMove {
 inline bool operator<(const ExtMove& f, const ExtMove& s) { return f.value < s.value; }
 
 template<GenType>
-ExtMove* generate(const Position& pos, ExtMove* moveList);
-
-ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, const Square sq);
+ExtMove* generate(const Position& pos, ExtMove* moveList, Square recapSq);
 
 // The MoveList struct wraps the generate() function and returns a convenient
 // list of moves. Using MoveList is sometimes preferable to directly calling
@@ -63,7 +62,7 @@ template<GenType T>
 struct MoveList {
 
     explicit MoveList(const Position& pos) :
-        last(generate<T>(pos, moveList)) {}
+        last(generate<T>(pos, moveList, SQ_NONE)) {}
     const ExtMove* begin() const { return moveList; }
     const ExtMove* end() const { return last; }
     size_t         size() const { return last - moveList; }

@@ -259,7 +259,7 @@ top:
     case CAPTURE_INIT :
     case PROBCUT_INIT :
         cur = endBadCaptures = moves;
-        endMoves             = generate<CAPTURES>(pos, cur);
+        endMoves             = generate<CAPTURES>(pos, cur, SQ_NONE);
 
         score<CAPTURES>();
         partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
@@ -298,7 +298,7 @@ top:
         if (!skipQuiets)
         {
             cur      = endBadCaptures;
-            endMoves = generate<QUIETS>(pos, cur);
+            endMoves = generate<QUIETS>(pos, cur, SQ_NONE);
 
             score<QUIETS>();
             partial_insertion_sort(cur, endMoves, -1960 - 3130 * depth);
@@ -326,7 +326,7 @@ top:
 
     case EVASION_INIT :
         cur      = moves;
-        endMoves = generate<EVASIONS>(pos, cur);
+        endMoves = generate<EVASIONS>(pos, cur, SQ_NONE);
 
         score<EVASIONS>();
         ++stage;
@@ -340,8 +340,8 @@ top:
 
     case QCAPTURE_INIT :
         cur = endBadCaptures = moves;
-        endMoves             = depth > DEPTH_QS_RECAPTURES ? generate<CAPTURES>(pos, cur)
-                                                           : generate_recaptures(pos, cur, recaptureSquare);
+        endMoves = depth > DEPTH_QS_RECAPTURES ? generate<CAPTURES>(pos, cur, recaptureSquare)
+                                               : generate<RECAPTURES>(pos, cur, recaptureSquare);
 
         score<CAPTURES>();
         partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
@@ -361,7 +361,7 @@ top:
 
     case QCHECK_INIT :
         cur      = moves;
-        endMoves = generate<QUIET_CHECKS>(pos, cur);
+        endMoves = generate<QUIET_CHECKS>(pos, cur, SQ_NONE);
 
         ++stage;
         [[fallthrough]];
