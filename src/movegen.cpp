@@ -200,23 +200,16 @@ ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, const Squar
     // Impossible for any pawns to capture on first rank
     if (ourPawns & ~UsRank1BB)
     {
-        // Recapture square is at rank 8, so we generate pawn promotions
-        if (relative_rank(Us, sq) == RANK_8)
-        {
-            if (shift<DownRight>(RecapBB) & ourPawns)
-                *moveList++ = make<PROMOTION>(sq + DownRight, sq, QUEEN);
+        const bool recapOnRank8 = relative_rank(Us, sq) == RANK_8;
 
-            if (shift<DownLeft>(RecapBB) & ourPawns)
-                *moveList++ = make<PROMOTION>(sq + DownLeft, sq, QUEEN);
-        }
-        else
-        {
-            if (shift<DownRight>(RecapBB) & ourPawns)
-                *moveList++ = make_move(sq + DownRight, sq);
+        // If recapture square is at rank 8, we generate pawn promotions
+        if (shift<DownRight>(RecapBB) & ourPawns)
+            *moveList++ = recapOnRank8 ? make<PROMOTION>(sq + DownRight, sq, QUEEN)
+                                       : make_move(sq + DownRight, sq);
 
-            if (shift<DownLeft>(RecapBB) & ourPawns)
-                *moveList++ = make_move(sq + DownLeft, sq);
-        }
+        if (shift<DownLeft>(RecapBB) & ourPawns)
+            *moveList++ = recapOnRank8 ? make<PROMOTION>(sq + DownLeft, sq, QUEEN)
+                                       : make_move(sq + DownLeft, sq);
     }
 
     for (PieceType pt = KNIGHT; pt <= KING; ++pt)
