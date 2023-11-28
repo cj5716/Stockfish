@@ -191,8 +191,6 @@ ExtMove* generate_moves(const Position& pos, ExtMove* moveList, Bitboard target)
 template<Color Us>
 ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, const Square sq) {
 
-    constexpr Direction UpRight   = (Us == WHITE ? NORTH_EAST : SOUTH_WEST);
-    constexpr Direction UpLeft    = (Us == WHITE ? NORTH_WEST : SOUTH_EAST);
     constexpr Direction DownRight = (Us == WHITE ? SOUTH_EAST : NORTH_WEST);
     constexpr Direction DownLeft  = (Us == WHITE ? SOUTH_WEST : NORTH_EAST);
     const Bitboard      RecapBB   = square_bb(sq);
@@ -204,18 +202,18 @@ ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, const Squar
         if (relative_rank(Us, sq) == RANK_8)
         {
             if (shift<DownRight>(RecapBB) & ourPawns)
-                *moveList++ = make<PROMOTION>(sq - UpLeft, sq, QUEEN);
+                *moveList++ = make<PROMOTION>(sq + DownRight, sq, QUEEN);
 
             if (shift<DownLeft>(RecapBB) & ourPawns)
-                *moveList++ = make<PROMOTION>(sq - UpRight, sq, QUEEN);
+                *moveList++ = make<PROMOTION>(sq + DownLeft, sq, QUEEN);
         }
         else
         {
             if (shift<DownRight>(RecapBB) & ourPawns)
-                *moveList++ = make_move(sq - UpLeft, sq);
+                *moveList++ = make_move(sq + DownRight, sq);
 
             if (shift<DownLeft>(RecapBB) & ourPawns)
-                *moveList++ = make_move(sq - UpRight, sq);
+                *moveList++ = make_move(sq + DownLeft, sq);
         }
     }
 
