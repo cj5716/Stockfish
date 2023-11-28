@@ -171,24 +171,35 @@ ExtMove* generate_pawn_moves(const Position& pos, ExtMove* moveList, Bitboard ta
 }
 
 
-template<Color Us, PieceType Pt, bool Checks>
+template<Color Us, PieceType Pt, GenType Type>
 ExtMove* generate_moves(const Position& pos, ExtMove* moveList, Bitboard target) {
 
     static_assert(Pt != KING && Pt != PAWN, "Unsupported piece type in generate_moves()");
 
-    Bitboard bb = pos.pieces(Us, Pt);
+    constexpr bool Checks = Type == QUIET_CHECKS;
+    Bitboard       bb     = pos.pieces(Us, Pt);
 
-    while (bb)
+    if constexpr (Type == RECAPTURES)
     {
-        Square   from = pop_lsb(bb);
-        Bitboard b    = attacks_bb<Pt>(from, pos.pieces()) & target;
-
-        // To check, you either move freely a blocker or make a direct check.
-        if (Checks && (Pt == QUEEN || !(pos.blockers_for_king(~Us) & from)))
-            b &= pos.check_squares(Pt);
-
+        Square   recapSq = lsb(target);
+        Bitboard b       = bb & attacks_bb<Pt>(recapSq, pos.pieces());
         while (b)
-            *moveList++ = make_move(from, pop_lsb(b));
+            *moveList++ = make_move(pop_lsb(b), recapSq);
+    }
+    else
+    {
+        while (bb)
+        {
+            Square   from = pop_lsb(bb);
+            Bitboard b    = attacks_bb<Pt>(from, pos.pieces()) & target;
+
+            // To check, you either move freely a blocker or make a direct check.
+            if (Checks && (Pt == QUEEN || !(pos.blockers_for_king(~Us) & from)))
+                b &= pos.check_squares(Pt);
+
+            while (b)
+                *moveList++ = make_move(from, pop_lsb(b));
+        }
     }
 
     return moveList;
@@ -213,10 +224,10 @@ ExtMove* generate_all(const Position& pos, ExtMove* moveList, Square recapSq) {
                                       : ~pos.pieces();  // QUIETS || QUIET_CHECKS
 
         moveList = generate_pawn_moves<Us, Type>(pos, moveList, target);
-        moveList = generate_moves<Us, KNIGHT, Checks>(pos, moveList, target);
-        moveList = generate_moves<Us, BISHOP, Checks>(pos, moveList, target);
-        moveList = generate_moves<Us, ROOK, Checks>(pos, moveList, target);
-        moveList = generate_moves<Us, QUEEN, Checks>(pos, moveList, target);
+        moveList = generate_moves<Us, KNIGHT, Type>(pos, moveList, target);
+        moveList = generate_moves<Us, BISHOP, Type>(pos, moveList, target);
+        moveList = generate_moves<Us, ROOK, Type>(pos, moveList, target);
+        moveList = generate_moves<Us, QUEEN, Type>(pos, moveList, target);
     }
 
     if (!Checks || pos.blockers_for_king(~Us) & ksq)
