@@ -193,10 +193,12 @@ ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, const Squar
 
     constexpr Direction DownRight = (Us == WHITE ? SOUTH_EAST : NORTH_WEST);
     constexpr Direction DownLeft  = (Us == WHITE ? SOUTH_WEST : NORTH_EAST);
+    constexpr Bitboard  UsRank1BB = (Us == WHITE ? Rank1BB : Rank8BB);
     const Bitboard      RecapBB   = square_bb(sq);
 
     Bitboard ourPawns = pos.pieces(Us, PAWN);
-    if (ourPawns)
+    // Impossible for any pawns to capture on first rank
+    if (ourPawns & ~UsRank1BB)
     {
         // Recapture square is at rank 8, so we generate pawn promotions
         if (relative_rank(Us, sq) == RANK_8)
