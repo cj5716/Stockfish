@@ -65,13 +65,15 @@ ExtMove* generate_pawn_moves(const Position& pos, ExtMove* moveList, Bitboard ta
     constexpr Direction UpLeft   = (Us == WHITE ? NORTH_WEST : SOUTH_EAST);
 
     const Bitboard emptySquares = ~pos.pieces();
-    const Bitboard enemies      = Type == EVASIONS ? pos.checkers() : pos.pieces(Them);
+    const Bitboard enemies      = Type == EVASIONS   ? pos.checkers()
+                                : Type == RECAPTURES ? target
+                                                     : pos.pieces(Them);
 
     Bitboard pawnsOn7    = pos.pieces(Us, PAWN) & TRank7BB;
     Bitboard pawnsNotOn7 = pos.pieces(Us, PAWN) & ~TRank7BB;
 
     // Single and double pawn pushes, no promotions
-    if constexpr (Type != CAPTURES)
+    if constexpr (Type != CAPTURES && Type != RECAPTURES)
     {
         Bitboard b1 = shift<Up>(pawnsNotOn7) & emptySquares;
         Bitboard b2 = shift<Up>(b1 & TRank3BB) & emptySquares;
@@ -111,7 +113,7 @@ ExtMove* generate_pawn_moves(const Position& pos, ExtMove* moveList, Bitboard ta
     {
         Bitboard b1 = shift<UpRight>(pawnsOn7) & enemies;
         Bitboard b2 = shift<UpLeft>(pawnsOn7) & enemies;
-        Bitboard b3 = shift<Up>(pawnsOn7) & emptySquares;
+        Bitboard b3 = Type == RECAPTURES ? 0 : shift<Up>(pawnsOn7) & emptySquares;
 
         if constexpr (Type == EVASIONS)
             b3 &= target;
@@ -127,7 +129,8 @@ ExtMove* generate_pawn_moves(const Position& pos, ExtMove* moveList, Bitboard ta
     }
 
     // Standard and en passant captures
-    if constexpr (Type == CAPTURES || Type == EVASIONS || Type == NON_EVASIONS)
+    if constexpr (Type == CAPTURES || Type == RECAPTURES || Type == EVASIONS
+                  || Type == NON_EVASIONS)
     {
         Bitboard b1 = shift<UpRight>(pawnsNotOn7) & enemies;
         Bitboard b2 = shift<UpLeft>(pawnsNotOn7) & enemies;
@@ -144,20 +147,23 @@ ExtMove* generate_pawn_moves(const Position& pos, ExtMove* moveList, Bitboard ta
             *moveList++ = make_move(to - UpLeft, to);
         }
 
-        if (pos.ep_square() != SQ_NONE)
+        if constexpr (Type != RECAPTURES)
         {
-            assert(rank_of(pos.ep_square()) == relative_rank(Us, RANK_6));
+            if (pos.ep_square() != SQ_NONE)
+            {
+                assert(rank_of(pos.ep_square()) == relative_rank(Us, RANK_6));
 
-            // An en passant capture cannot resolve a discovered check
-            if (Type == EVASIONS && (target & (pos.ep_square() + Up)))
-                return moveList;
+                // An en passant capture cannot resolve a discovered check
+                if (Type == EVASIONS && (target & (pos.ep_square() + Up)))
+                    return moveList;
 
-            b1 = pawnsNotOn7 & pawn_attacks_bb(Them, pos.ep_square());
+                b1 = pawnsNotOn7 & pawn_attacks_bb(Them, pos.ep_square());
 
-            assert(b1);
+                assert(b1);
 
-            while (b1)
-                *moveList++ = make<EN_PASSANT>(pop_lsb(b1), pos.ep_square());
+                while (b1)
+                    *moveList++ = make<EN_PASSANT>(pop_lsb(b1), pos.ep_square());
+            }
         }
     }
 
@@ -203,7 +209,7 @@ ExtMove* generate_all(const Position& pos, ExtMove* moveList, Square recapSq) {
         target = Type == EVASIONS     ? between_bb(ksq, lsb(pos.checkers()))
                : Type == NON_EVASIONS ? ~pos.pieces(Us)
                : Type == CAPTURES     ? pos.pieces(~Us)
-               : Type == RECAPTURES   ? recapSq
+               : Type == RECAPTURES   ? square_bb(recapSq)
                                       : ~pos.pieces();  // QUIETS || QUIET_CHECKS
 
         moveList = generate_pawn_moves<Us, Type>(pos, moveList, target);
