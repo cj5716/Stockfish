@@ -187,6 +187,54 @@ ExtMove* generate_moves(const Position& pos, ExtMove* moveList, Bitboard target)
     return moveList;
 }
 
+// Specialized function for recaptures(when depth <= DEPTH_QS_RECAPTURES)
+template<Color Us>
+ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, const Square sq) {
+
+    constexpr Direction UpRight   = (Us == WHITE ? NORTH_EAST : SOUTH_WEST);
+    constexpr Direction UpLeft    = (Us == WHITE ? NORTH_WEST : SOUTH_EAST);
+    constexpr Direction DownRight = (Us == WHITE ? SOUTH_EAST : NORTH_WEST);
+    constexpr Direction DownLeft  = (Us == WHITE ? SOUTH_WEST : NORTH_EAST);
+    const Bitboard      RecapBB   = square_bb(sq);
+
+    Bitboard ourPawns = pos.pieces(Us, PAWN);
+    if (ourPawns)
+    {
+        // Recapture square is at rank 8, so we generate pawn promotions
+        if (relative_rank(Us, sq) == RANK_8)
+        {
+            if (shift<DownRight>(RecapBB) & ourPawns)
+                *moveList++ = make<PROMOTION>(sq - UpLeft, sq, QUEEN);
+
+            if (shift<DownLeft>(RecapBB) & ourPawns)
+                *moveList++ = make<PROMOTION>(sq - UpRight, sq, QUEEN);
+        }
+        else
+        {
+            if (shift<DownRight>(RecapBB) & ourPawns)
+                *moveList++ = make_move(sq - UpLeft, sq);
+
+            if (shift<DownLeft>(RecapBB) & ourPawns)
+                *moveList++ = make_move(sq - UpRight, sq);
+        }
+    }
+
+    for (PieceType pt = KNIGHT; pt <= KING; ++pt)
+    {
+        Bitboard ourPiece = pos.pieces(Us, pt);
+        if (ourPiece)
+        {
+            Bitboard pieceAttacks = attacks_bb(pt, sq, pos.pieces()) & ourPiece;
+            while (pieceAttacks)
+            {
+                Square from = pop_lsb(pieceAttacks);
+                *moveList++ = make_move(from, sq);
+            }
+        }
+    }
+
+    return moveList;
+}
 
 template<Color Us, GenType Type>
 ExtMove* generate_all(const Position& pos, ExtMove* moveList) {
@@ -232,6 +280,13 @@ ExtMove* generate_all(const Position& pos, ExtMove* moveList) {
 
 }  // namespace
 
+ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, Square sq) {
+
+    Color us = pos.side_to_move();
+
+    return us == WHITE ? generate_recaptures<WHITE>(pos, moveList, sq)
+                       : generate_recaptures<BLACK>(pos, moveList, sq);
+}
 
 // <CAPTURES>     Generates all pseudo-legal captures plus queen promotions
 // <QUIETS>       Generates all pseudo-legal non-captures and underpromotions

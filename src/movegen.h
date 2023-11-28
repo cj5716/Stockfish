@@ -54,6 +54,8 @@ inline bool operator<(const ExtMove& f, const ExtMove& s) { return f.value < s.v
 template<GenType>
 ExtMove* generate(const Position& pos, ExtMove* moveList);
 
+ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, const Square sq);
+
 // The MoveList struct wraps the generate() function and returns a convenient
 // list of moves. Using MoveList is sometimes preferable to directly calling
 // the lower level generate() function.
