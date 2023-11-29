@@ -30,6 +30,7 @@ class Position;
 
 enum GenType {
     CAPTURES,
+    RECAPTURES,
     QUIETS,
     QUIET_CHECKS,
     EVASIONS,
@@ -52,7 +53,7 @@ struct ExtMove {
 inline bool operator<(const ExtMove& f, const ExtMove& s) { return f.value < s.value; }
 
 template<GenType>
-ExtMove* generate(const Position& pos, ExtMove* moveList);
+ExtMove* generate(const Position& pos, ExtMove* moveList, Square recapSq = SQ_NONE);
 
 ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, const Square sq);
 

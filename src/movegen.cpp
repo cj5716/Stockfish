@@ -237,9 +237,12 @@ ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, const Squar
 }
 
 template<Color Us, GenType Type>
-ExtMove* generate_all(const Position& pos, ExtMove* moveList) {
+ExtMove* generate_all(const Position& pos, ExtMove* moveList, [[maybe_unused]] Square recapSq) {
 
     static_assert(Type != LEGAL, "Unsupported type in generate_all()");
+
+    if constexpr (Type == RECAPTURES)
+        return generate_recaptures<Us>(pos, moveList, recapSq);
 
     constexpr bool Checks = Type == QUIET_CHECKS;  // Reduce template instantiations
     const Square   ksq    = pos.square<KING>(Us);
@@ -280,15 +283,8 @@ ExtMove* generate_all(const Position& pos, ExtMove* moveList) {
 
 }  // namespace
 
-ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, Square sq) {
-
-    Color us = pos.side_to_move();
-
-    return us == WHITE ? generate_recaptures<WHITE>(pos, moveList, sq)
-                       : generate_recaptures<BLACK>(pos, moveList, sq);
-}
-
 // <CAPTURES>     Generates all pseudo-legal captures plus queen promotions
+// <RECAPTURES>   Generates all pseudo-legal captures towards a certain square
 // <QUIETS>       Generates all pseudo-legal non-captures and underpromotions
 // <EVASIONS>     Generates all pseudo-legal check evasions
 // <NON_EVASIONS> Generates all pseudo-legal captures and non-captures
@@ -297,29 +293,30 @@ ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, Square sq) 
 //
 // Returns a pointer to the end of the move list.
 template<GenType Type>
-ExtMove* generate(const Position& pos, ExtMove* moveList) {
+ExtMove* generate(const Position& pos, ExtMove* moveList, [[maybe_unused]] Square recapSq) {
 
     static_assert(Type != LEGAL, "Unsupported type in generate()");
     assert((Type == EVASIONS) == bool(pos.checkers()));
 
     Color us = pos.side_to_move();
 
-    return us == WHITE ? generate_all<WHITE, Type>(pos, moveList)
-                       : generate_all<BLACK, Type>(pos, moveList);
+    return us == WHITE ? generate_all<WHITE, Type>(pos, moveList, recapSq)
+                       : generate_all<BLACK, Type>(pos, moveList, recapSq);
 }
 
 // Explicit template instantiations
-template ExtMove* generate<CAPTURES>(const Position&, ExtMove*);
-template ExtMove* generate<QUIETS>(const Position&, ExtMove*);
-template ExtMove* generate<EVASIONS>(const Position&, ExtMove*);
-template ExtMove* generate<QUIET_CHECKS>(const Position&, ExtMove*);
-template ExtMove* generate<NON_EVASIONS>(const Position&, ExtMove*);
+template ExtMove* generate<CAPTURES>(const Position&, ExtMove*, Square);
+template ExtMove* generate<RECAPTURES>(const Position&, ExtMove*, Square);
+template ExtMove* generate<QUIETS>(const Position&, ExtMove*, Square);
+template ExtMove* generate<EVASIONS>(const Position&, ExtMove*, Square);
+template ExtMove* generate<QUIET_CHECKS>(const Position&, ExtMove*, Square);
+template ExtMove* generate<NON_EVASIONS>(const Position&, ExtMove*, Square);
 
 
 // generate<LEGAL> generates all the legal moves in the given position
 
 template<>
-ExtMove* generate<LEGAL>(const Position& pos, ExtMove* moveList) {
+ExtMove* generate<LEGAL>(const Position& pos, ExtMove* moveList, [[maybe_unused]] Square recapSq) {
 
     Color    us     = pos.side_to_move();
     Bitboard pinned = pos.blockers_for_king(us) & pos.pieces(us);

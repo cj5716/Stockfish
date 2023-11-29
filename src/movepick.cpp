@@ -341,7 +341,7 @@ top:
     case QCAPTURE_INIT :
         cur = endBadCaptures = moves;
         endMoves             = depth > DEPTH_QS_RECAPTURES ? generate<CAPTURES>(pos, cur)
-                                                           : generate_recaptures(pos, cur, recaptureSquare);
+                                                           : generate<RECAPTURES>(pos, cur, recaptureSquare);
 
         score<CAPTURES>();
         partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
