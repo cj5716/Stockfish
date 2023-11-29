@@ -191,6 +191,9 @@ ExtMove* generate_moves(const Position& pos, ExtMove* moveList, Bitboard target)
 template<Color Us>
 ExtMove* generate_recaptures(const Position& pos, ExtMove* moveList, const Square sq) {
 
+    if (sq == SQ_NONE)
+        return moveList;
+
     constexpr Direction UpRight   = (Us == WHITE ? NORTH_EAST : SOUTH_WEST);
     constexpr Direction UpLeft    = (Us == WHITE ? NORTH_WEST : SOUTH_EAST);
     constexpr Direction DownRight = (Us == WHITE ? SOUTH_EAST : NORTH_WEST);
