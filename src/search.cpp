@@ -1131,7 +1131,8 @@ moves_loop:  // When in check, search starts here
             r--;
 
         // Decrease reduction if static eval is not a good prediction of node value (~10000 Elo)
-        if (ttValue != VALUE_NONE && abs(ss->staticEval - ttValue) >= 512)
+        if (ss->staticEval != VALUE_NONE && ttValue != VALUE_NONE
+            && abs(ss->staticEval - ttValue) >= 512)
             r--;
 
         // Increase reduction for cut nodes (~3 Elo)
