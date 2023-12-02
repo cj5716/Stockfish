@@ -1427,7 +1427,9 @@ Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
 
     // Decide the replacement and cutoff priority of the qsearch TT entries
-    ttDepth = ss->inCheck || depth >= DEPTH_QS_CHECKS ? DEPTH_QS_CHECKS : DEPTH_QS_NO_CHECKS;
+    ttDepth = ss->inCheck || depth >= DEPTH_QS_CHECKS ? DEPTH_QS_CHECKS
+            : depth == DEPTH_QS_ONE_CHECK             ? DEPTH_QS_ONE_CHECK
+                                                      : DEPTH_QS_NO_CHECKS;
 
     // Step 3. Transposition table lookup
     posKey  = pos.key();
@@ -1596,6 +1598,9 @@ Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
                     break;  // Fail high
             }
         }
+
+        if (mp.stage == DEPTH_QS_ONE_CHECK)
+            break;
     }
 
     // Step 9. Check for mate
