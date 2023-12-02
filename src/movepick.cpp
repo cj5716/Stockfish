@@ -356,7 +356,7 @@ top:
         endMoves = generate<QUIET_CHECKS>(pos, cur);
 
         score<QUIETS>();
-        partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
+        partial_insertion_sort(cur, endMoves, -1960 - 3130 * depth);
 
         ++stage;
         [[fallthrough]];
