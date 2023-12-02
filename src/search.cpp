@@ -979,7 +979,7 @@ moves_loop:  // When in check, search starts here
             if (capture || givesCheck)
             {
                 // Futility pruning for captures (~2 Elo)
-                if (!givesCheck && lmrDepth < 7 && !ss->inCheck)
+                if (!givesCheck && lmrDepth < 7 && !ss->inCheck && type_of(move) != PROMOTION)
                 {
                     Piece capturedPiece = pos.piece_on(to_sq(move));
                     int   futilityEval =
