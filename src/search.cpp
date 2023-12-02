@@ -814,7 +814,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
             // until ply exceeds nmpMinPly.
             thisThread->nmpMinPly = ss->ply + 3 * (depth - R) / 4;
 
-            Value v = search<NonPV>(pos, ss, beta - 1, beta, depth - R, false);
+            Value v = search<NonPV>(pos, ss, beta - 1, beta, depth - R, true);
 
             thisThread->nmpMinPly = 0;
 
