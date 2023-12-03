@@ -36,8 +36,8 @@
 #include "uci.h"
 
 namespace Stockfish {
-int v1 = 32, v2 = 448, v3 = 256;
-TUNE(v1, v2, v3);
+int v1 = 32, v2 = 192, v3 = 256, v4 = 22, v5 = 25;
+TUNE(v1, v2, v3, v4, v5);
 ThreadPool Threads;  // Global object
 
 
@@ -256,7 +256,8 @@ Thread* ThreadPool::get_best_thread() const {
             Value thScore = th->rootMoves[0].score != -VALUE_INFINITE
                             ? th->rootMoves[0].score
                             : th->rootMoves[0].previousScore;
-            return (v1 * (thScore - minScore) + v2 - v3 * (th->rootMoves[0].pv.size() <= 2))
+            return (v1 * (thScore - minScore) + v2
+                    + v3 * (v4 + Value(th->rootMoves[0].pv.size())) / v5)
                  * int(th->completedDepth) / 32;
         };
 
