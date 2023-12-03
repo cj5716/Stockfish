@@ -36,7 +36,8 @@
 #include "uci.h"
 
 namespace Stockfish {
-
+int v1 = 32, v2 = 448, v3 = 256;
+TUNE(v1, v2, v3);
 ThreadPool Threads;  // Global object
 
 
@@ -220,35 +221,54 @@ Thread* ThreadPool::get_best_thread() const {
 
     Thread*                 bestThread = threads.front();
     std::map<Move, int64_t> votes;
-    Value                   minScore = VALUE_NONE;
+    Value                   maxScore = -VALUE_INFINITE;
+    Value                   minScore = VALUE_INFINITE;
 
     // Find the minimum score of all threads
     for (Thread* th : threads)
-        minScore = std::min(minScore, th->rootMoves[0].score);
+    {
+        // We don't want to use invalid scores!
+        Value thScore = th->rootMoves[0].score != -VALUE_INFINITE ? th->rootMoves[0].score
+                                                                  : th->rootMoves[0].previousScore;
+        minScore      = std::min(thScore, minScore);
 
-    // Vote according to score and depth, and select the best thread
-    auto thread_value = [minScore](Thread* th) {
-        return (th->rootMoves[0].score - minScore + 14) * int(th->completedDepth);
-    };
-
-    for (Thread* th : threads)
-        votes[th->rootMoves[0].pv[0]] += thread_value(th);
-
-    for (Thread* th : threads)
-        if (abs(bestThread->rootMoves[0].score) >= VALUE_TB_WIN_IN_MAX_PLY)
+        // On equal scores prefer the thread with an exact-score PV
+        if (thScore > maxScore - (th->rootMoves[0].pv.size() > bestThread->rootMoves[0].pv.size()))
         {
-            // Make sure we pick the shortest mate / TB conversion or stave off mate the longest
-            if (th->rootMoves[0].score > bestThread->rootMoves[0].score)
-                bestThread = th;
-        }
-        else if (th->rootMoves[0].score >= VALUE_TB_WIN_IN_MAX_PLY
-                 || (th->rootMoves[0].score > VALUE_TB_LOSS_IN_MAX_PLY
-                     && (votes[th->rootMoves[0].pv[0]] > votes[bestThread->rootMoves[0].pv[0]]
-                         || (votes[th->rootMoves[0].pv[0]] == votes[bestThread->rootMoves[0].pv[0]]
-                             && thread_value(th) * int(th->rootMoves[0].pv.size() > 2)
-                                  > thread_value(bestThread)
-                                      * int(bestThread->rootMoves[0].pv.size() > 2)))))
+            maxScore   = thScore;
             bestThread = th;
+        }
+    }
+
+    assert(minScore > -VALUE_INFINITE);
+    assert(maxScore < VALUE_INFINITE);
+
+    // Use our voting scheme if we didn't find
+    // a TB or even a mate score.
+    if (minScore > VALUE_TB_LOSS_IN_MAX_PLY && maxScore < VALUE_TB_WIN_IN_MAX_PLY)
+    {
+        // Reset bestThread
+        bestThread = threads.front();
+
+        // Vote according to score, depth and PV length, and select the best thread
+        auto thread_value = [minScore](Thread* th) {
+            // Do not use invalid scores
+            Value thScore = th->rootMoves[0].score != -VALUE_INFINITE
+                            ? th->rootMoves[0].score
+                            : th->rootMoves[0].previousScore;
+            return (v1 * (thScore - minScore) + v2 - v3 * (th->rootMoves[0].pv.size() <= 2))
+                 * int(th->completedDepth) / 32;
+        };
+
+        for (Thread* th : threads)
+            votes[th->rootMoves[0].pv[0]] += thread_value(th);
+
+        for (Thread* th : threads)
+            // On equal votes we use thread value as tiebreaks
+            if (votes[th->rootMoves[0].pv[0]] > votes[bestThread->rootMoves[0].pv[0]]
+                                                  - (thread_value(th) > thread_value(bestThread)))
+                bestThread = th;
+    }
 
     return bestThread;
 }
