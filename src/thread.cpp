@@ -75,6 +75,10 @@ void Thread::clear() {
             for (auto& to : continuationHistory[inCheck][c])
                 for (auto& h : to)
                     h->fill(-71);
+
+    for (int i = 1; i < MAX_MOVES; ++i)
+        reductions[i] = int(
+          (20.37 + std::log(Threads.size()) * int(id() + 1) / (Threads.size() + 1)) * std::log(i));
 }
 
 
@@ -148,9 +152,6 @@ void ThreadPool::set(size_t requested) {
 
         // Reallocate the hash with the new threadpool size
         TT.resize(size_t(Options["Hash"]));
-
-        // Init thread number dependent search params.
-        Search::init();
     }
 }
 

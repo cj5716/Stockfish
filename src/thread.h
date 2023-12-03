@@ -64,6 +64,7 @@ class Thread {
     Depth                 rootDepth, completedDepth;
     Value                 rootDelta;
     Value                 rootSimpleEval;
+    int                   reductions[MAX_MOVES];
     CounterMoveHistory    counterMoves;
     ButterflyHistory      mainHistory;
     CapturePieceToHistory captureHistory;
