@@ -77,8 +77,9 @@ void Thread::clear() {
                     h->fill(-71);
 
     for (int i = 1; i < MAX_MOVES; ++i)
-        reductions[i] = int(
-          (20.37 + std::log(Threads.size()) * int(id() + 1) / (Threads.size() + 1)) * std::log(i));
+        reductions[i] =
+          int((20.12 + (std::log(Threads.size()) + 0.5) * int(id() + 1) / (Threads.size() + 1))
+              * std::log(i));
 }
 
 
