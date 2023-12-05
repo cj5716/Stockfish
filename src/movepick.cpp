@@ -31,7 +31,7 @@ namespace Stockfish {
 namespace {
 
 enum Stages {
-    // generate main search moves
+    // generate main search/qsearch moves
     MAIN_TT,
     CAPTURE_INIT,
     GOOD_CAPTURE,
@@ -39,6 +39,8 @@ enum Stages {
     QUIET_INIT,
     QUIET,
     BAD_CAPTURE,
+    QCHECK_INIT,
+    QCHECK,
 
     // generate evasion moves
     EVASION_TT,
@@ -49,13 +51,6 @@ enum Stages {
     PROBCUT_TT,
     PROBCUT_INIT,
     PROBCUT,
-
-    // generate qsearch moves
-    QSEARCH_TT,
-    QCAPTURE_INIT,
-    QCAPTURE,
-    QCHECK_INIT,
-    QCHECK
 };
 
 // Sort moves in descending order up to and including
@@ -122,7 +117,7 @@ MovePicker::MovePicker(const Position&              p,
     depth(d) {
     assert(d <= 0);
 
-    stage = (pos.checkers() ? EVASION_TT : QSEARCH_TT) + !(ttm && pos.pseudo_legal(ttm));
+    stage = (pos.checkers() ? EVASION_TT : MAIN_TT) + !(ttm && pos.pseudo_legal(ttm));
 }
 
 // Constructor for ProbCut: we generate captures with SEE greater
@@ -249,14 +244,12 @@ top:
 
     case MAIN_TT :
     case EVASION_TT :
-    case QSEARCH_TT :
     case PROBCUT_TT :
         ++stage;
         return ttMove;
 
     case CAPTURE_INIT :
     case PROBCUT_INIT :
-    case QCAPTURE_INIT :
         cur = endBadCaptures = moves;
         endMoves             = generate<CAPTURES>(pos, cur);
 
@@ -273,14 +266,23 @@ top:
             }))
             return *(cur - 1);
 
-        // Prepare the pointers to loop over the refutations array
-        cur      = std::begin(refutations);
-        endMoves = std::end(refutations);
-
-        // If the countermove is the same as a killer, skip it
-        if (refutations[0].move == refutations[2].move
-            || refutations[1].move == refutations[2].move)
-            --endMoves;
+        if (depth > 0)
+        {
+            // Prepare the pointers to loop over the refutations array
+            cur      = std::begin(refutations);
+            endMoves = std::end(refutations);
+            // If the countermove is the same as a killer, skip it
+            if (refutations[0].move == refutations[2].move
+                || refutations[1].move == refutations[2].move)
+                --endMoves;
+        }
+        else
+        {
+            cur      = moves;
+            endMoves = endBadCaptures;
+            stage    = BAD_CAPTURE;
+            goto top;
+        }
 
         ++stage;
         [[fallthrough]];
@@ -321,23 +323,6 @@ top:
         [[fallthrough]];
 
     case BAD_CAPTURE :
-        return select<Next>([]() { return true; });
-
-    case EVASION_INIT :
-        cur      = moves;
-        endMoves = generate<EVASIONS>(pos, cur);
-
-        score<EVASIONS>();
-        ++stage;
-        [[fallthrough]];
-
-    case EVASION :
-        return select<Best>([]() { return true; });
-
-    case PROBCUT :
-        return select<Next>([&]() { return pos.see_ge(*cur, threshold); });
-
-    case QCAPTURE :
         if (select<Next>([]() { return true; }))
             return *(cur - 1);
 
@@ -357,7 +342,22 @@ top:
 
     case QCHECK :
         return select<Next>([]() { return true; });
+
+    case EVASION_INIT :
+        cur      = moves;
+        endMoves = generate<EVASIONS>(pos, cur);
+
+        score<EVASIONS>();
+        ++stage;
+        [[fallthrough]];
+
+    case EVASION :
+        return select<Best>([]() { return true; });
+
+    case PROBCUT :
+        return select<Next>([&]() { return pos.see_ge(*cur, threshold); });
     }
+
 
     assert(false);
     return MOVE_NONE;  // Silence warning
