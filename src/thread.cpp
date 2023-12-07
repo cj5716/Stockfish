@@ -36,8 +36,6 @@
 #include "uci.h"
 
 namespace Stockfish {
-int v1 = 32, v2 = 192, v3 = 256, v4 = 22, v5 = 25;
-TUNE(v1, v2, v3, v4, v5);
 ThreadPool Threads;  // Global object
 
 
@@ -219,6 +217,9 @@ void ThreadPool::start_thinking(Position&                 pos,
 
 Thread* ThreadPool::get_best_thread() const {
 
+    if (Threads.size() == 1)
+        return Threads.main();
+
     Thread*                 bestThread = threads.front();
     std::map<Move, int64_t> votes;
     Value                   maxScore = -VALUE_INFINITE;
@@ -256,8 +257,8 @@ Thread* ThreadPool::get_best_thread() const {
             Value thScore = th->rootMoves[0].score != -VALUE_INFINITE
                             ? th->rootMoves[0].score
                             : th->rootMoves[0].previousScore;
-            return (v1 * (thScore - minScore) + v2
-                    + v3 * (v4 + Value(th->rootMoves[0].pv.size())) / v5)
+            return (32 * (thScore - minScore) + 194
+                    + 276 * (21 + Value(th->rootMoves[0].pv.size())) / 24)
                  * int(th->completedDepth) / 32;
         };
 
