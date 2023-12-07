@@ -1125,7 +1125,7 @@ moves_loop:  // When in check, search starts here
         // Step 16. Make the move
         pos.do_move(move, st, givesCheck);
 
-        if (canDraw && repetitionMove && pos.has_repeated())
+        if (canDraw && !repetitionMove && pos.has_repeated())
             repetitionMove = move;
 
         // Decrease reduction if position is or has been on the PV (~4 Elo)
