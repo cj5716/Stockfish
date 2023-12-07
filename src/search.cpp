@@ -525,6 +525,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
 
     constexpr bool PvNode   = nodeType != NonPV;
     constexpr bool rootNode = nodeType == Root;
+    bool           canDraw  = false;
 
     // Dive into quiescence search when the depth reaches zero
     if (depth <= 0)
@@ -534,7 +535,8 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     // if the opponent had an alternative move earlier to this position.
     if (!rootNode && alpha < VALUE_DRAW && pos.has_game_cycle(ss->ply))
     {
-        alpha = value_draw(pos.this_thread());
+        alpha   = value_draw(pos.this_thread());
+        canDraw = true;
         if (alpha >= beta)
             return alpha;
     }
@@ -550,7 +552,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
 
     TTEntry* tte;
     Key      posKey;
-    Move     ttMove, move, excludedMove, bestMove;
+    Move     ttMove, move, excludedMove, bestMove, repetitionMove;
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, singularQuietLMR;
@@ -566,6 +568,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     moveCount = captureCount = quietCount = ss->moveCount = 0;
     bestValue                                             = -VALUE_INFINITE;
     maxValue                                              = VALUE_INFINITE;
+    repetitionMove                                        = MOVE_NONE;
 
     // Check for the available remaining time
     if (thisThread == Threads.main())
@@ -1122,6 +1125,9 @@ moves_loop:  // When in check, search starts here
         // Step 16. Make the move
         pos.do_move(move, st, givesCheck);
 
+        if (canDraw && repetitionMove && pos.has_repeated())
+            repetitionMove = move;
+
         // Decrease reduction if position is or has been on the PV (~4 Elo)
         if (ss->ttPv && !likelyFailLow)
             r -= cutNode && tte->depth() >= depth ? 3 : 2;
@@ -1323,6 +1329,9 @@ moves_loop:  // When in check, search starts here
                 quietsSearched[quietCount++] = move;
         }
     }
+
+    if (repetitionMove && !bestMove)
+        bestMove = repetitionMove;
 
     // Step 21. Check for mate and stalemate
     // All legal moves have been searched and if there are no legal moves, it
