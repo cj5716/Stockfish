@@ -534,9 +534,13 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     // if the opponent had an alternative move earlier to this position.
     if (!rootNode && alpha < VALUE_DRAW && pos.has_game_cycle(ss->ply))
     {
-        alpha = value_draw(pos.this_thread());
+        Value origAlpha = alpha;
+        alpha           = value_draw(pos.this_thread());
         if (alpha >= beta)
             return alpha;
+
+        else if (origAlpha < VALUE_DRAW - 2)
+            alpha = VALUE_DRAW - 2;
     }
 
     assert(-VALUE_INFINITE <= alpha && alpha < beta && beta <= VALUE_INFINITE);
