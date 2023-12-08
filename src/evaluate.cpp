@@ -43,7 +43,7 @@
 //     const unsigned int         gEmbeddedNNUESize;    // the size of the embedded file
 // Note that this does not work in Microsoft Visual Studio.
 #if !defined(_MSC_VER) && !defined(NNUE_EMBEDDING_OFF)
-INCBIN(EmbeddedNNUEBig,   EvalFileDefaultNameBig);
+INCBIN(EmbeddedNNUEBig, EvalFileDefaultNameBig);
 INCBIN(EmbeddedNNUESmall, EvalFileDefaultNameSmall);
 #else
 const unsigned char        gEmbeddedNNUEBigData[1]   = {0x0};
@@ -59,9 +59,9 @@ namespace Stockfish {
 
 namespace Eval {
 
-std::string currentEvalFileName[2] = {"None", "None"};
-const std::string EvFiles[2]       = {"EvalFileBig", "EvalFileSmall"};
-const std::string EvFileNames[2]   = {EvalFileDefaultNameBig, EvalFileDefaultNameSmall};
+std::string       currentEvalFileName[2] = {"None", "None"};
+const std::string EvFiles[2]             = {"EvalFileBig", "EvalFileSmall"};
+const std::string EvFileNames[2]         = {EvalFileDefaultNameBig, EvalFileDefaultNameSmall};
 
 // Tries to load a NNUE network at startup time, or when the engine
 // receives a UCI command "setoption name EvalFile value nn-[a-z0-9]{12}.nnue"
@@ -79,10 +79,10 @@ void NNUE::init() {
             eval_file = EvFileNames[small];
 
 #if defined(DEFAULT_NNUE_DIRECTORY)
-    std::vector<std::string> dirs = {"<internal>", "", CommandLine::binaryDirectory,
-                                     stringify(DEFAULT_NNUE_DIRECTORY)};
+        std::vector<std::string> dirs = {"<internal>", "", CommandLine::binaryDirectory,
+                                         stringify(DEFAULT_NNUE_DIRECTORY)};
 #else
-    std::vector<std::string> dirs = {"<internal>", "", CommandLine::binaryDirectory};
+        std::vector<std::string> dirs = {"<internal>", "", CommandLine::binaryDirectory};
 #endif
 
         for (const std::string& directory : dirs)
@@ -170,8 +170,7 @@ Value Eval::evaluate(const Position& pos) {
     int   simpleEval = pos.simple_eval() + (int(pos.key() & 7) - 3);
 
     int lazyThreshold = RookValue + KnightValue + 16 * shuffling * shuffling
-                                  + abs(pos.this_thread()->bestValue)
-                                  + abs(pos.this_thread()->rootSimpleEval);
+                      + abs(pos.this_thread()->bestValue) + abs(pos.this_thread()->rootSimpleEval);
 
     bool lazy = abs(simpleEval) > lazyThreshold * 105 / 100;
 
@@ -179,10 +178,9 @@ Value Eval::evaluate(const Position& pos) {
         v = Value(simpleEval);
     else
     {
-        int accBias = pos.state()->accumulatorBig.computed[0]
-                    + pos.state()->accumulatorBig.computed[1]
-                    - pos.state()->accumulatorSmall.computed[0]
-                    - pos.state()->accumulatorSmall.computed[1];
+        int accBias =
+          pos.state()->accumulatorBig.computed[0] + pos.state()->accumulatorBig.computed[1]
+          - pos.state()->accumulatorSmall.computed[0] - pos.state()->accumulatorSmall.computed[1];
 
         int  nnueComplexity;
         bool smallNet = abs(simpleEval) > lazyThreshold * (90 + accBias) / 100;

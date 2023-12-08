@@ -160,10 +160,7 @@ Option::operator int() const {
     return (type == "spin" ? std::stoi(currentValue) : currentValue == "true");
 }
 
-Option::operator std::string() const {
-    assert(type == "string");
-    return currentValue;
-}
+Option::operator std::string() const { return currentValue; }
 
 bool Option::operator==(const char* s) const {
     assert(type == "combo");
