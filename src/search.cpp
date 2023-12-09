@@ -83,14 +83,13 @@ Value futility_margin(Depth d, bool noTtCutNode, bool improving) {
 // Reductions lookup table initialized at startup
 int Reductions[MAX_MOVES];  // [depth or moveNumber]
 
+// Movecount pruning lookup table initialized at startup
+int FutilityMoveCount[MAX_PLY][2];  // [depth][improving]
+
 Depth reduction(bool i, Depth d, int mn, Value delta, Value rootDelta) {
     int reductionScale = Reductions[d] * Reductions[mn];
     return (reductionScale + 1346 - int(delta) * 896 / int(rootDelta)) / 1024
          + (!i && reductionScale > 880);
-}
-
-constexpr int futility_move_count(bool improving, Depth depth) {
-    return improving ? (3 + depth * depth) : (3 + depth * depth) / 2;
 }
 
 // History and stats update bonus, based on depth
@@ -187,6 +186,12 @@ void Search::init() {
 
     for (int i = 1; i < MAX_MOVES; ++i)
         Reductions[i] = int((20.37 + std::log(Threads.size()) / 2) * std::log(i));
+
+    for (int i = 0; i < MAX_PLY; ++i)
+    {
+        FutilityMoveCount[i][0] = 1.5 + 0.5 * std::pow(double(i), 2.0);
+        FutilityMoveCount[i][1] = 3.0 + 1.0 * std::pow(double(i), 2.0);
+    }
 }
 
 
@@ -971,7 +976,7 @@ moves_loop:  // When in check, search starts here
         {
             // Skip quiet moves if movecount exceeds our FutilityMoveCount threshold (~8 Elo)
             if (!moveCountPruning)
-                moveCountPruning = moveCount >= futility_move_count(improving, depth);
+                moveCountPruning = moveCount >= FutilityMoveCount[depth][improving];
 
             // Reduced depth of the next LMR search
             int lmrDepth = newDepth - r;
