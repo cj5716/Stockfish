@@ -219,6 +219,9 @@ void ThreadPool::start_thinking(Position&                 pos,
 
 Thread* ThreadPool::get_best_thread() const {
 
+    if (Threads.size() == 1)
+        return Threads.main();
+
     Thread*                 bestThread = threads.front();
     std::map<Move, int64_t> votes;
     Value                   maxScore = -VALUE_INFINITE;
@@ -256,7 +259,7 @@ Thread* ThreadPool::get_best_thread() const {
             Value thScore = th->rootMoves[0].score != -VALUE_INFINITE
                             ? th->rootMoves[0].score
                             : th->rootMoves[0].previousScore;
-            return (v1 * (thScore - minScore) + v2 - v3 * (th->rootMoves[0].pv.size() <= 2))
+            return (34 * (thScore - minScore) + 419 - 271 * (th->rootMoves[0].pv.size() <= 2))
                  * int(th->completedDepth) / 32;
         };
 
