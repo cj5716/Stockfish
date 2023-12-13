@@ -420,7 +420,7 @@ void Thread::search() {
                 }
                 else if (bestValue >= beta)
                 {
-                    if (bestValue >= beta + delta)
+                    if (rootDepth > 12)
                         alpha = (alpha + beta) / 2;
                     beta = std::min(bestValue + delta, VALUE_INFINITE);
                     ++failedHighCnt;
