@@ -46,8 +46,7 @@
 #include "uci.h"
 
 namespace Stockfish {
-int v1 = 150, v2 = 50, v3 = 200, v4 = 300, v5 = 100, v6 = 200;
-TUNE(v1, v2, v3, v4, v5, v6);
+
 namespace Search {
 
 LimitsType Limits;
@@ -190,8 +189,8 @@ void Search::init() {
 
     for (int i = 0; i < MAX_PLY; ++i)
     {
-        FutilityMoveCount[i][0] = v1 / 100.0 + v2 / 100.0 * std::pow(double(i), v3 / 100.0);
-        FutilityMoveCount[i][1] = v4 / 100.0 + v5 / 100.0 * std::pow(double(i), v6 / 100.0);
+        FutilityMoveCount[i][0] = 1.43 + 0.49 * std::pow(double(i), 1.86);
+        FutilityMoveCount[i][1] = 3.12 + 0.96 * std::pow(double(i), 1.88);
     }
 }
 
