@@ -551,7 +551,7 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     TTEntry* tte;
     Key      posKey;
     Move     ttMove, move, excludedMove, bestMove;
-    Depth    extension, newDepth;
+    Depth    extension, newDepth, probCutR;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, singularQuietLMR;
     bool     capture, moveCountPruning, ttCapture;
@@ -841,18 +841,19 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
         depth -= 2;
 
     probCutBeta = beta + 163 - 67 * improving;
+    probCutR    = 3 + std::clamp(int(probCutBeta - ss->staticEval) / 512, 0, 2);
 
     // Step 11. ProbCut (~10 Elo)
     // If we have a good enough capture (or queen promotion) and a reduced search returns a value
     // much above beta, we can (almost) safely prune the previous move.
     if (
-      !PvNode && depth > 3
+      !PvNode && depth > probCutR
       && abs(beta) < VALUE_TB_WIN_IN_MAX_PLY
       // If value from transposition table is lower than probCutBeta, don't attempt probCut
-      // there and in further interactions with transposition table cutoff depth is set to depth - 3
-      // because probCut search has depth set to depth - 4 but we also do a move before it
-      // So effective depth is equal to depth - 3
-      && !(tte->depth() >= depth - 3 && ttValue != VALUE_NONE && ttValue < probCutBeta))
+      // there and in further interactions with transposition table cutoff depth is set to depth - probCutR
+      // because probCut search has depth set to depth - 1 - probCutR but we also do a move before it
+      // So effective depth is equal to depth - probCutR
+      && !(tte->depth() >= depth - probCutR && ttValue != VALUE_NONE && ttValue < probCutBeta))
     {
         assert(probCutBeta < VALUE_INFINITE);
 
@@ -878,16 +879,16 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
 
                 // If the qsearch held, perform the regular search
                 if (value >= probCutBeta)
-                    value = -search<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1, depth - 4,
-                                           !cutNode);
+                    value = -search<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1,
+                                           depth - probCutR - 1, !cutNode);
 
                 pos.undo_move(move);
 
                 if (value >= probCutBeta)
                 {
                     // Save ProbCut data into transposition table
-                    tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER, depth - 3,
-                              move, ss->staticEval);
+                    tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER,
+                              std::max(depth - probCutR, 0), move, ss->staticEval);
                     return value - (probCutBeta - beta);
                 }
             }
