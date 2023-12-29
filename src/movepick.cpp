@@ -354,16 +354,18 @@ top:
         ++stage;
         [[fallthrough]];
 
-    case QCHECK_INIT :
     case PROBCUT_CHECK_INIT :
+    case QCHECK_INIT :
         cur      = moves;
         endMoves = generate<QUIET_CHECKS>(pos, cur);
 
         ++stage;
         goto top;
 
-    case QCHECK :
     case PROBCUT_CHECK :
+        return select<Next>([&]() { return pos.see_ge(*cur, threshold); });
+
+    case QCHECK :
         return select<Next>([]() { return true; });
     }
 
