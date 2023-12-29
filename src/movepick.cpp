@@ -47,8 +47,10 @@ enum Stages {
 
     // generate probcut moves
     PROBCUT_TT,
-    PROBCUT_INIT,
-    PROBCUT,
+    PROBCUT_CAPTURE_INIT,
+    PROBCUT_CAPTURE,
+    PROBCUT_CHECK_INIT,
+    PROBCUT_CHECK,
 
     // generate qsearch moves
     QSEARCH_TT,
@@ -255,7 +257,7 @@ top:
         return ttMove;
 
     case CAPTURE_INIT :
-    case PROBCUT_INIT :
+    case PROBCUT_CAPTURE_INIT :
     case QCAPTURE_INIT :
         cur = endBadCaptures = moves;
         endMoves             = generate<CAPTURES>(pos, cur);
@@ -334,8 +336,12 @@ top:
     case EVASION :
         return select<Best>([]() { return true; });
 
-    case PROBCUT :
-        return select<Next>([&]() { return pos.see_ge(*cur, threshold); });
+    case PROBCUT_CAPTURE :
+        if (select<Next>([&]() { return pos.see_ge(*cur, threshold); }))
+            return *(cur - 1);
+
+        ++stage;
+        goto top;
 
     case QCAPTURE :
         if (select<Next>([]() { return true; }))
@@ -349,13 +355,15 @@ top:
         [[fallthrough]];
 
     case QCHECK_INIT :
+    case PROBCUT_CHECK_INIT :
         cur      = moves;
         endMoves = generate<QUIET_CHECKS>(pos, cur);
 
         ++stage;
-        [[fallthrough]];
+        goto top;
 
     case QCHECK :
+    case PROBCUT_CHECK :
         return select<Next>([]() { return true; });
     }
 

@@ -863,15 +863,13 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
         while ((move = mp.next_move()) != MOVE_NONE)
             if (move != excludedMove && pos.legal(move))
             {
-                assert(pos.capture_stage(move));
-
                 // Prefetch the TT entry for the resulting position
                 prefetch(TT.first_entry(pos.key_after(move)));
 
                 ss->currentMove = move;
                 ss->continuationHistory =
-                  &thisThread
-                     ->continuationHistory[ss->inCheck][true][pos.moved_piece(move)][to_sq(move)];
+                  &thisThread->continuationHistory[ss->inCheck][pos.capture_stage(move)]
+                                                  [pos.moved_piece(move)][to_sq(move)];
 
                 pos.do_move(move, st);
 
