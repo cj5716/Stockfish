@@ -144,7 +144,8 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePiece
 template<GenType Type>
 void MovePicker::score() {
 
-    static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
+    static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS || Type == QUIET_CHECKS,
+                  "Wrong type");
 
     [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook,
       threatenedPieces;
@@ -207,6 +208,11 @@ void MovePicker::score() {
                                        : 0)
                        : 0;
         }
+
+        else if constexpr (Type == QUIET_CHECKS)
+            m.value = (*mainHistory)[pos.side_to_move()][from_to(m)]
+                    + (*continuationHistory[0])[pos.moved_piece(m)][to_sq(m)]
+                    + (*pawnHistory)[pawn_structure(pos)][pos.moved_piece(m)][to_sq(m)];
 
         else  // Type == EVASIONS
         {
@@ -351,6 +357,8 @@ top:
     case QCHECK_INIT :
         cur      = moves;
         endMoves = generate<QUIET_CHECKS>(pos, cur);
+        score<QUIET_CHECKS>();
+        partial_insertion_sort(cur, endMoves, -1960);
 
         ++stage;
         [[fallthrough]];
