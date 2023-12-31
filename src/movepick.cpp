@@ -129,16 +129,18 @@ MovePicker::MovePicker(const Position&              p,
 
 // Constructor for ProbCut: we generate captures with SEE greater
 // than or equal to the given threshold.
-MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePieceToHistory* cph) :
+MovePicker::MovePicker(
+  const Position& p, Move ttm, Value th, const CapturePieceToHistory* cph, Depth d) :
     pos(p),
     captureHistory(cph),
     ttMove(ttm),
-    threshold(th) {
+    threshold(th),
+    depth(d) {
     assert(!pos.checkers());
 
     stage = PROBCUT_TT
-          + !(ttm && (pos.capture_stage(ttm) || pos.gives_check(ttm)) && pos.pseudo_legal(ttm)
-              && pos.see_ge(ttm, threshold));
+          + !(ttm && (pos.capture_stage(ttm) || (depth > 5 && pos.gives_check(ttm)))
+              && pos.pseudo_legal(ttm) && pos.see_ge(ttm, threshold));
 }
 
 // Assigns a numerical value to each move in a list, used
@@ -340,6 +342,9 @@ top:
     case PROBCUT_CAPTURE :
         if (select<Next>([&]() { return pos.see_ge(*cur, threshold); }))
             return *(cur - 1);
+
+        if (depth <= 5)
+            return MOVE_NONE;
 
         ++stage;
         goto top;
