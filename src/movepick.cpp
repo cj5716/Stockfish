@@ -137,7 +137,8 @@ MovePicker::MovePicker(const Position& p, Move ttm, Value th, const CapturePiece
     assert(!pos.checkers());
 
     stage = PROBCUT_TT
-          + !(ttm && pos.capture_stage(ttm) && pos.pseudo_legal(ttm) && pos.see_ge(ttm, threshold));
+          + !(ttm && (pos.capture_stage(ttm) || pos.gives_check(ttm)) && pos.pseudo_legal(ttm)
+              && pos.see_ge(ttm, threshold));
 }
 
 // Assigns a numerical value to each move in a list, used
