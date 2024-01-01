@@ -1166,8 +1166,12 @@ moves_loop:  // When in check, search starts here
         if (ttCapture)
             r++;
 
-        // Decrease reduction for PvNodes (~2 Elo)
+        // Decrease reduction for PV nodes (~2 Elo)
         if (PvNode)
+            r--;
+
+        // Decrease reduction if we are at root (~10000 Elo)
+        if (rootNode)
             r--;
 
         // Decrease reduction if a quiet ttMove has been singularly extended (~1 Elo)
