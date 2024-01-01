@@ -784,8 +784,9 @@ Value search(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth, boo
     // check at our previous move we look at static evaluation at move prior to it
     // and if we were in check at move prior to it flag is set to true) and is
     // false otherwise. The improving flag is used in various pruning heuristics.
-    improving = (ss - 2)->staticEval != VALUE_NONE  ? ss->staticEval > (ss - 2)->staticEval
-              : (ss - 4)->staticEval != VALUE_NONE && ss->staticEval > (ss - 4)->staticEval;
+    improving = (ss - 2)->staticEval != VALUE_NONE
+                ? ss->staticEval > (ss - 2)->staticEval
+                : (ss - 4)->staticEval != VALUE_NONE && ss->staticEval > (ss - 4)->staticEval;
 
     // Step 7. Razoring (~1 Elo)
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
@@ -1157,17 +1158,21 @@ moves_loop:  // When in check, search starts here
         if ((ss - 1)->moveCount > 7)
             r--;
 
-        // Increase reduction for cut nodes (~3 Elo)
-        if (cutNode)
+        // Decrease reduction for PV nodes (~2 Elo)
+        if (PvNode)
+            r--;
+
+        // Increase reduction for expected cut nodes (~3 Elo)
+        else if (cutNode)
             r += 2;
+
+        // Increase reduction for expected all nodes that have not been on the PV (~10000 Elo)
+        else if (!ss->ttPv)
+            r++;
 
         // Increase reduction if ttMove is a capture (~3 Elo)
         if (ttCapture)
             r++;
-
-        // Decrease reduction for PvNodes (~2 Elo)
-        if (PvNode)
-            r--;
 
         // Decrease reduction if a quiet ttMove has been singularly extended (~1 Elo)
         if (singularQuietLMR)
