@@ -446,7 +446,7 @@ void Thread::search() {
         if (!Threads.stop)
             completedDepth = rootDepth;
 
-        if (Threads.stop && std::abs(rootMoves[0].previousScore) >= VALUE_TB_WIN_IN_MAX_PLY)
+        if (Threads.stop && rootMoves[0].previousScore <= VALUE_TB_LOSS_IN_MAX_PLY)
         {
             rootMoves[0].pv[0] = lastBestMove;
             rootMoves[0].score = rootMoves[0].previousScore;
