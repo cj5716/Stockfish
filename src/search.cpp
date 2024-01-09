@@ -1573,7 +1573,7 @@ Value qsearch(Position& pos, Stack* ss, Value alpha, Value beta, Depth depth) {
         if (!pos.legal(move))
             continue;
 
-        givesCheck = pos.gives_check(move);
+        givesCheck = mp.stage == QCHECK ? true : pos.gives_check(move);
         capture    = pos.capture_stage(move);
 
         moveCount++;
