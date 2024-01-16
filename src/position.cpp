@@ -955,7 +955,7 @@ void Position::do_castling(Color us, Square from, Square& to, Square& rfrom, Squ
 
 // Used to do a "null move": it flips
 // the side to move without executing any move on the board.
-void Position::do_null_move(StateInfo& newSt, TranspositionTable& tt) {
+void Position::do_null_move(StateInfo& newSt) {
 
     assert(!checkers());
     assert(&newSt != st);
@@ -976,9 +976,7 @@ void Position::do_null_move(StateInfo& newSt, TranspositionTable& tt) {
         st->epSquare = SQ_NONE;
     }
 
-    st->key ^= Zobrist::side;
     ++st->rule50;
-    prefetch(tt.first_entry(key()));
 
     st->pliesFromNull = 0;
 
@@ -1006,6 +1004,9 @@ void Position::undo_null_move() {
 // for speculative prefetch. It doesn't recognize special moves like castling,
 // en passant and promotions.
 Key Position::key_after(Move m) const {
+
+    if (m == Move::null())
+        return st->key ^ Zobrist::side;
 
     Square from     = m.from_sq();
     Square to       = m.to_sq();

@@ -816,13 +816,16 @@ Value Search::Worker::search(
     {
         assert(eval - beta >= 0);
 
+        // Speculative prefetch as early as possible
+        prefetch(tt.first_entry(pos.key_after(Move::null())));
+
         // Null move dynamic reduction based on depth and eval
         Depth R = std::min(int(eval - beta) / 144, 6) + depth / 3 + 4;
 
         ss->currentMove         = Move::null();
         ss->continuationHistory = &thisThread->continuationHistory[0][0][NO_PIECE][0];
 
-        pos.do_null_move(st, tt);
+        pos.do_null_move(st);
 
         Value nullValue = -search<NonPV>(pos, ss + 1, -beta, -beta + 1, depth - R, !cutNode);
 
