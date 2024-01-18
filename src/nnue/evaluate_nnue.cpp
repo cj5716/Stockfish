@@ -194,7 +194,7 @@ Value evaluate(const Position& pos, bool adjusted, int* complexity) {
     // overaligning stack variables with alignas() doesn't work correctly.
 
     constexpr uint64_t alignment = CacheLineSize;
-    constexpr int      delta     = Net_Size == Small ? 48 : 24;
+    constexpr int      delta     = Net_Size == Small ? -24 : 24;
 
 #if defined(ALIGNAS_ON_STACK_VARIABLES_BROKEN)
     TransformedFeatureType
