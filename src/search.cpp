@@ -1595,6 +1595,13 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
                     bestValue = alpha;
                     continue;
                 }
+
+                // If static exchange evaluation is too good, we can return early
+                if (pos.see_ge(move, beta + RookValue - ss->staticEval))
+                {
+                    bestValue = beta;
+                    break;
+                }
             }
 
             // We prune after the second quiet check evasion move, where being 'in check' is
