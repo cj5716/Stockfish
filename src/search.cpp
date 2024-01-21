@@ -806,8 +806,9 @@ Value Search::Worker::search(
         && (!ttMove || ttCapture))
     {
         value = beta > VALUE_TB_LOSS_IN_MAX_PLY ? (eval + beta) / 2 : eval;
-        tte->save(posKey, value, false, BOUND_LOWER, DEPTH_NONE, Move::none(), unadjustedStaticEval,
-                  tt.generation());
+        if (!ss->ttHit)
+            tte->save(posKey, value, false, BOUND_LOWER, DEPTH_NONE, Move::none(),
+                      unadjustedStaticEval, tt.generation());
         return value;
     }
 
