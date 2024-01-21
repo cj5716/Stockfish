@@ -669,6 +669,12 @@ Value Search::Worker::search(
                    : ttValue;
     }
 
+    // If we are on a non PV node that is likely to fail low, hint the accumulator
+    if (!PvNode && !excludedMove && tte->depth() >= depth
+        && ttValue != VALUE_NONE  // Possible in case of TT access race or if !ttHit
+        && tte->bound() == BOUND_UPPER && ttValue <= alpha)
+        Eval::NNUE::hint_common_parent_position(pos);
+
     // Step 5. Tablebases probe
     if (!rootNode && !excludedMove && tbConfig.cardinality)
     {
