@@ -1595,14 +1595,6 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
                     bestValue = alpha;
                     continue;
                 }
-
-                // If static exchange evaluation is too good, we can return early
-                if (depth <= DEPTH_QS_NO_CHECKS
-                    && pos.see_ge(move, beta + RookValue - ss->staticEval))
-                {
-                    bestValue = beta;
-                    break;
-                }
             }
 
             // We prune after the second quiet check evasion move, where being 'in check' is
@@ -1615,6 +1607,13 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
             if (!capture && (*contHist[0])[pos.moved_piece(move)][move.to_sq()] < 0
                 && (*contHist[1])[pos.moved_piece(move)][move.to_sq()] < 0)
                 continue;
+
+            // If static exchange evaluation is too good, we can return early
+            if (depth <= DEPTH_QS_NO_CHECKS && pos.see_ge(move, beta + RookValue - ss->staticEval))
+            {
+                bestValue = beta;
+                break;
+            }
 
             // Do not search moves with bad enough SEE values (~5 Elo)
             if (!pos.see_ge(move, -77))
