@@ -1530,6 +1530,9 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
             alpha = bestValue;
 
         futilityBase = ss->staticEval + 182;
+
+        if (futilityBase <= alpha)
+            Eval::NNUE::hint_common_parent_position(pos);
     }
 
     const PieceToHistory* contHist[] = {(ss - 1)->continuationHistory,
