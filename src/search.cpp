@@ -805,9 +805,10 @@ Value Search::Worker::search(
         && eval >= beta && eval < 29008  // smaller than TB wins
         && (!ttMove || ttCapture))
     {
-        tte->save(posKey, eval, false, BOUND_LOWER, DEPTH_NONE, Move::none(), unadjustedStaticEval,
+        value = beta > VALUE_TB_LOSS_IN_MAX_PLY ? (eval + beta) / 2 : eval;
+        tte->save(posKey, value, false, BOUND_LOWER, DEPTH_NONE, Move::none(), unadjustedStaticEval,
                   tt.generation());
-        return beta > VALUE_TB_LOSS_IN_MAX_PLY ? (eval + beta) / 2 : eval;
+        return value;
     }
 
     // Step 9. Null move search with verification search (~35 Elo)
