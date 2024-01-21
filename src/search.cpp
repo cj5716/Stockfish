@@ -1597,7 +1597,8 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
                 }
 
                 // If static exchange evaluation is too good, we can return early
-                if (pos.see_ge(move, beta + RookValue - ss->staticEval))
+                if (depth <= DEPTH_QS_NO_CHECKS
+                    && pos.see_ge(move, beta + RookValue - ss->staticEval))
                 {
                     bestValue = beta;
                     break;
