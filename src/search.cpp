@@ -884,8 +884,6 @@ Value Search::Worker::search(
         while ((move = mp.next_move()) != Move::none())
             if (move != excludedMove && pos.legal(move))
             {
-                assert(pos.capture_stage(move));
-
                 // Prefetch the TT entry for the resulting position
                 prefetch(tt.first_entry(pos.key_after(move)));
 
