@@ -63,7 +63,7 @@ constexpr int futility_move_count(bool improving, Depth depth) {
     return improving ? (3 + depth * depth) : (3 + depth * depth) / 2;
 }
 
-// Add correctionHistory value to raw staticEval and guarantee evaluation does not hit the tablebase range
+// Add correctionHistory value to raw unadjustedStaticEval and guarantee evaluation does not hit the tablebase range
 Value to_corrected_static_eval(Value v, const Worker& w, const Position& pos) {
     auto cv = w.correctionHistory[pos.side_to_move()][pawn_structure_index<Correction>(pos)];
     v += cv * std::abs(cv) / 14095;
@@ -1397,10 +1397,10 @@ moves_loop:  // When in check, search starts here
 
     // Adjust correction history
     if (!ss->inCheck && (!bestMove || !pos.capture(bestMove))
-        && !(bestValue >= beta && bestValue <= ss->staticEval)
+        && !(bestValue >= beta && bestValue <= unadjustedStaticEval)
         && !(!bestMove && bestValue >= ss->staticEval))
     {
-        auto bonus = std::clamp(int(bestValue - ss->staticEval) * depth / 8,
+        auto bonus = std::clamp(int(bestValue - unadjustedStaticEval) * depth / 8,
                                 -CORRECTION_HISTORY_LIMIT / 4, CORRECTION_HISTORY_LIMIT / 4);
         thisThread->correctionHistory[us][pawn_structure_index<Correction>(pos)] << bonus;
     }
