@@ -1829,22 +1829,25 @@ void update_continuation_histories(Stack* ss, Piece pc, Square to, int bonus) {
 void update_quiet_stats(
   const Position& pos, Stack* ss, Search::Worker& workerThread, Move move, int bonus) {
 
-    // Update killers
-    if (ss->killers[0] != move)
-    {
-        ss->killers[1] = ss->killers[0];
-        ss->killers[0] = move;
-    }
-
     Color us = pos.side_to_move();
     workerThread.mainHistory[us][move.from_to()] << bonus;
     update_continuation_histories(ss, pos.moved_piece(move), move.to_sq(), bonus);
 
-    // Update countermove history
-    if (((ss - 1)->currentMove).is_ok())
+    if (!ss->inCheck)
     {
-        Square prevSq                                           = ((ss - 1)->currentMove).to_sq();
-        workerThread.counterMoves[pos.piece_on(prevSq)][prevSq] = move;
+        // Update killers
+        if (ss->killers[0] != move)
+        {
+            ss->killers[1] = ss->killers[0];
+            ss->killers[0] = move;
+        }
+
+        // Update countermove history
+        if (((ss - 1)->currentMove).is_ok())
+        {
+            Square prevSq = ((ss - 1)->currentMove).to_sq();
+            workerThread.counterMoves[pos.piece_on(prevSq)][prevSq] = move;
+        }
     }
 }
 }
