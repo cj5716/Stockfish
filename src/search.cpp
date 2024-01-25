@@ -793,7 +793,7 @@ Value Search::Worker::search(
     razorMargin = 434 + (327 - 167 * ((ss + 1)->cutoffCnt > 3)) * depth * depth;
     if (eval <= alpha - razorMargin)
     {
-        Value razorAlpha = alpha - razorMargin;
+        Value razorAlpha = alpha - razorMargin / 2;
         value            = qsearch<NonPV>(pos, ss, razorAlpha, razorAlpha + 1);
         if (value <= razorAlpha)
             return value;
