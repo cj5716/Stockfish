@@ -381,7 +381,7 @@ void Search::Worker::iterative_deepening() {
                 // re-search, otherwise exit the loop.
                 if (bestValue <= alpha)
                 {
-                    beta  = (alpha + beta) / 2;
+                    beta  = bestValue > alpha - 10 ? (alpha * 2 + beta) / 3 : (alpha + beta) / 2;
                     alpha = std::max(bestValue - delta, -VALUE_INFINITE);
 
                     failedHighCnt = 0;
