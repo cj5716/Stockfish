@@ -50,6 +50,9 @@ namespace TB = Tablebases;
 using Eval::evaluate;
 using namespace Search;
 
+int v1 = 464, v2 = 64, v3 = 48, v4 = 880, v5 = 96, v6 = 48;
+TUNE(v1, v2, v3, v4, v5, v6);
+
 namespace {
 
 
@@ -494,8 +497,8 @@ void Search::Worker::clear() {
 
     for (int i = 1; i < MAX_MOVES; ++i)
     {
-        extensions[i][0] = std::max(int(464 * i + 64 * std::log(i) - 48), 0);
-        extensions[i][1] = std::max(int(880 * i + 96 * std::log(i) - 48), 0);
+        extensions[i][0] = std::max(int(v1 * i + v2 * std::log(i) - v3), 0);
+        extensions[i][1] = std::max(int(v4 * i + v5 * std::log(i) - v6), 0);
     }
 }
 
