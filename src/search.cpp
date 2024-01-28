@@ -491,6 +491,12 @@ void Search::Worker::clear() {
 
     for (int i = 1; i < MAX_MOVES; ++i)
         reductions[i] = int((20.37 + std::log(size_t(options["Threads"])) / 2) * std::log(i));
+
+    for (int i = 1; i < MAX_MOVES; ++i)
+    {
+        extensions[i][0] = std::max(int(464 * i + 64 * std::log(i) - 48), 0);
+        extensions[i][1] = std::max(int(880 * i + 96 * std::log(i) - 48), 0);
+    }
 }
 
 
@@ -1031,7 +1037,7 @@ moves_loop:  // When in check, search starts here
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                 && tte->depth() >= depth - 3)
             {
-                Value singularBeta  = ttValue - (58 + 52 * (ss->ttPv && !PvNode)) * depth / 64;
+                Value singularBeta  = ttValue - extensions[depth][ss->ttPv && !PvNode] / 1024;
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;

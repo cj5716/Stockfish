@@ -174,7 +174,7 @@ class Worker {
    public:
     Worker(SharedState&, std::unique_ptr<ISearchManager>, size_t);
 
-    // Called at instantiation to initialize Reductions tables
+    // Called at instantiation to initialize Reductions and Extensions tables
     // Reset histories, usually before a new game
     void clear();
 
@@ -234,6 +234,9 @@ class Worker {
 
     // Reductions lookup table initialized at startup
     int reductions[MAX_MOVES];  // [depth or moveNumber]
+
+    // Extensions lookup table initialized at startup
+    int extensions[MAX_MOVES][2];  // [depth][is former PV node]
 
     // The main thread has a SearchManager, the others have a NullSearchManager
     std::unique_ptr<ISearchManager> manager;
