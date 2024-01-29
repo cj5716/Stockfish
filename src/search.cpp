@@ -50,7 +50,7 @@ namespace TB = Tablebases;
 using Eval::evaluate;
 using namespace Search;
 
-int v1 = 464, v2 = 64, v3 = 48, v4 = 880, v5 = 96, v6 = 48;
+int v1 = 464, v2 = 7168, v3 = 3072, v4 = 880, v5 = 6144, v6 = 3072;
 TUNE(v1, v2, v3, v4, v5, v6);
 
 namespace {
