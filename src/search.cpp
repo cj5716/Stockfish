@@ -578,6 +578,7 @@ Value Search::Worker::search(
     (ss + 1)->excludedMove = bestMove = Move::none();
     (ss + 2)->killers[0] = (ss + 2)->killers[1] = Move::none();
     (ss + 2)->cutoffCnt                         = 0;
+    ss->pvDistance                              = PvNode ? 0 : (ss - 1)->pvDistance + 1;
     ss->doubleExtensions                        = (ss - 1)->doubleExtensions;
     Square prevSq = ((ss - 1)->currentMove).is_ok() ? ((ss - 1)->currentMove).to_sq() : SQ_NONE;
     ss->statScore = 0;
@@ -1334,7 +1335,7 @@ moves_loop:  // When in check, search starts here
     else if (!priorCapture && prevSq != SQ_NONE)
     {
         int bonus = (depth > 5) + (PvNode || cutNode) + ((ss - 1)->statScore < -16797)
-                  + ((ss - 1)->moveCount > 10);
+                  + ((ss - 1)->moveCount > 10) + (ss->pvDistance == 1);
         update_continuation_histories(ss - 1, pos.piece_on(prevSq), prevSq,
                                       stat_bonus(depth) * bonus);
         thisThread->mainHistory[~us][((ss - 1)->currentMove).from_to()]
