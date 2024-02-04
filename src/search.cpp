@@ -55,7 +55,7 @@ namespace {
 
 // Futility margin
 Value futility_margin(Depth d, bool noTtCutNode, bool improving, bool threatenedPieces) {
-    Value futilityMult = 116 - 47 * noTtCutNode - 15 * threatenedPieces;
+    Value futilityMult = 116 - 47 * noTtCutNode + 15 * threatenedPieces;
     return (futilityMult * d - 3 * futilityMult / 2 * improving);
 }
 
