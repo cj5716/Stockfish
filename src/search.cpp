@@ -54,8 +54,8 @@ namespace {
 
 
 // Futility margin
-Value futility_margin(Depth d, bool noTtCutNode, bool improving) {
-    Value futilityMult = 116 - 47 * noTtCutNode;
+Value futility_margin(Depth d, bool noTtCutNode, bool improving, bool threatenedPieces) {
+    Value futilityMult = 116 - 47 * noTtCutNode - 15 * threatenedPieces;
     return (futilityMult * d - 3 * futilityMult / 2 * improving);
 }
 
@@ -526,6 +526,7 @@ Value Search::Worker::search(
     bool     capture, moveCountPruning, ttCapture;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
+    Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook, threatenedPieces;
 
     // Step 1. Initialize node
     Worker* thisThread = this;
@@ -572,8 +573,9 @@ Value Search::Worker::search(
     (ss + 2)->killers[0] = (ss + 2)->killers[1] = Move::none();
     (ss + 2)->cutoffCnt                         = 0;
     ss->doubleExtensions                        = (ss - 1)->doubleExtensions;
-    Square prevSq = ((ss - 1)->currentMove).is_ok() ? ((ss - 1)->currentMove).to_sq() : SQ_NONE;
-    ss->statScore = 0;
+    Square prevSq    = ((ss - 1)->currentMove).is_ok() ? ((ss - 1)->currentMove).to_sq() : SQ_NONE;
+    ss->statScore    = 0;
+    threatenedByPawn = threatenedByMinor = threatenedByRook = threatenedPieces = 0ULL;
 
     // Step 4. Transposition table lookup.
     excludedMove = ss->excludedMove;
@@ -754,17 +756,28 @@ Value Search::Worker::search(
             return value;
     }
 
-    // Step 8. Futility pruning: child node (~40 Elo)
+    // Step 8. Initialize threats used in further pruning and in move ordering
+    threatenedByPawn = pos.attacks_by<PAWN>(~us);
+    threatenedByMinor =
+      pos.attacks_by<KNIGHT>(~us) | pos.attacks_by<BISHOP>(~us) | threatenedByPawn;
+    threatenedByRook = pos.attacks_by<ROOK>(~us) | threatenedByMinor;
+
+    // Pieces threatened by pieces of lesser material value
+    threatenedPieces = (pos.pieces(us, QUEEN) & threatenedByRook)
+                     | (pos.pieces(us, ROOK) & threatenedByMinor)
+                     | (pos.pieces(us, KNIGHT, BISHOP) & threatenedByPawn);
+
+    // Step 9. Futility pruning: child node (~40 Elo)
     // The depth condition is important for mate finding.
     if (!ss->ttPv && depth < 11
-        && eval - futility_margin(depth, cutNode && !ss->ttHit, improving)
+        && eval - futility_margin(depth, cutNode && !ss->ttHit, improving, threatenedPieces)
                - (ss - 1)->statScore / 327
              >= beta
         && eval >= beta && eval < 28702  // smaller than TB wins
         && (!ttMove || ttCapture))
         return beta > VALUE_TB_LOSS_IN_MAX_PLY ? (eval + beta) / 2 : eval;
 
-    // Step 9. Null move search with verification search (~35 Elo)
+    // Step 10. Null move search with verification search (~35 Elo)
     if (!PvNode && (ss - 1)->currentMove != Move::null() && (ss - 1)->statScore < 17379
         && eval >= beta && eval >= ss->staticEval && ss->staticEval >= beta - 21 * depth + 329
         && !excludedMove && pos.non_pawn_material(us) && ss->ply >= thisThread->nmpMinPly
@@ -805,7 +818,7 @@ Value Search::Worker::search(
         }
     }
 
-    // Step 10. Internal iterative reductions (~9 Elo)
+    // Step 11. Internal iterative reductions (~9 Elo)
     // For PV nodes without a ttMove, we decrease depth by 2,
     // or by 4 if the current position is present in the TT and
     // the stored depth is greater than or equal to the current depth.
@@ -822,7 +835,7 @@ Value Search::Worker::search(
 
     probCutBeta = beta + 182 - 68 * improving;
 
-    // Step 11. ProbCut (~10 Elo)
+    // Step 12. ProbCut (~10 Elo)
     // If we have a good enough capture (or queen promotion) and a reduced search returns a value
     // much above beta, we can (almost) safely prune the previous move.
     if (
@@ -879,7 +892,7 @@ Value Search::Worker::search(
 
 moves_loop:  // When in check, search starts here
 
-    // Step 12. A small Probcut idea, when we are in check (~4 Elo)
+    // Step 13. A small Probcut idea, when we are in check (~4 Elo)
     probCutBeta = beta + 446;
     if (ss->inCheck && !PvNode && ttCapture && (tte->bound() & BOUND_LOWER)
         && tte->depth() >= depth - 4 && ttValue >= probCutBeta
@@ -897,12 +910,13 @@ moves_loop:  // When in check, search starts here
       prevSq != SQ_NONE ? thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] : Move::none();
 
     MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &thisThread->captureHistory,
-                  contHist, &thisThread->pawnHistory, countermove, ss->killers);
+                  contHist, &thisThread->pawnHistory, countermove, ss->killers, threatenedByPawn,
+                  threatenedByMinor, threatenedByRook, threatenedPieces);
 
     value            = bestValue;
     moveCountPruning = false;
 
-    // Step 13. Loop through all pseudo-legal moves until no moves remain
+    // Step 14. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
     while ((move = mp.next_move(moveCountPruning)) != Move::none())
     {

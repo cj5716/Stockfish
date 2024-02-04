@@ -163,7 +163,11 @@ class MovePicker {
                const PieceToHistory**,
                const PawnHistory*,
                Move,
-               const Move*);
+               const Move*,
+               Bitboard tbp,
+               Bitboard tbm,
+               Bitboard tbr,
+               Bitboard tp);
     MovePicker(const Position&,
                Move,
                Depth,
@@ -188,11 +192,12 @@ class MovePicker {
     const PieceToHistory**       continuationHistory;
     const PawnHistory*           pawnHistory;
     Move                         ttMove;
-    ExtMove refutations[3], *cur, *endMoves, *endBadCaptures, *beginBadQuiets, *endBadQuiets;
-    int     stage;
-    int     threshold;
-    Depth   depth;
-    ExtMove moves[MAX_MOVES];
+    ExtMove  refutations[3], *cur, *endMoves, *endBadCaptures, *beginBadQuiets, *endBadQuiets;
+    int      stage;
+    int      threshold;
+    Depth    depth;
+    ExtMove  moves[MAX_MOVES];
+    Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook, threatenedPieces;
 };
 
 }  // namespace Stockfish
