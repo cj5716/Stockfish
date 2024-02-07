@@ -483,7 +483,8 @@ void Search::Worker::clear() {
 
 
     for (size_t i = 1; i < reductions.size(); ++i)
-        reductions[i] = int((20.37 + std::log(size_t(options["Threads"])) / 2) * std::log(i));
+        reductions[i] = int((19.37 + (thread_idx & 0x2) + std::log(size_t(options["Threads"])) / 2)
+                            * std::log(i));
 }
 
 
