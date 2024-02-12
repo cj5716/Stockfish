@@ -521,7 +521,7 @@ Value Search::Worker::search(
     Move     ttMove, move, excludedMove, bestMove;
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
-    bool     givesCheck, improving, priorCapture;
+    bool     givesCheck, improving, priorCapture, failedNull;
     bool     capture, moveCountPruning, ttCapture;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
@@ -572,6 +572,7 @@ Value Search::Worker::search(
     (ss + 2)->cutoffCnt                         = 0;
     ss->multipleExtensions                      = (ss - 1)->multipleExtensions;
     Square prevSq = ((ss - 1)->currentMove).is_ok() ? ((ss - 1)->currentMove).to_sq() : SQ_NONE;
+    failedNull    = false;
     ss->statScore = 0;
 
     // Step 4. Transposition table lookup.
@@ -781,25 +782,30 @@ Value Search::Worker::search(
 
         pos.undo_null_move();
 
-        // Do not return unproven mate or TB scores
-        if (nullValue >= beta && nullValue < VALUE_TB_WIN_IN_MAX_PLY)
+        if (nullValue >= beta)
         {
-            if (thisThread->nmpMinPly || depth < 16)
-                return nullValue;
+            // Do not return unproven mate or TB scores
+            if (nullValue < VALUE_TB_WIN_IN_MAX_PLY)
+            {
+                if (thisThread->nmpMinPly || depth < 16)
+                    return nullValue;
 
-            assert(!thisThread->nmpMinPly);  // Recursive verification is not allowed
+                assert(!thisThread->nmpMinPly);  // Recursive verification is not allowed
 
-            // Do verification search at high depths, with null move pruning disabled
-            // until ply exceeds nmpMinPly.
-            thisThread->nmpMinPly = ss->ply + 3 * (depth - R) / 4;
+                // Do verification search at high depths, with null move pruning disabled
+                // until ply exceeds nmpMinPly.
+                thisThread->nmpMinPly = ss->ply + 3 * (depth - R) / 4;
 
-            Value v = search<NonPV>(pos, ss, beta - 1, beta, depth - R, false);
+                Value v = search<NonPV>(pos, ss, beta - 1, beta, depth - R, false);
 
-            thisThread->nmpMinPly = 0;
+                thisThread->nmpMinPly = 0;
 
-            if (v >= beta)
-                return nullValue;
+                if (v >= beta)
+                    return nullValue;
+            }
         }
+        else
+            failedNull = true;
     }
 
     // Step 10. Internal iterative reductions (~9 Elo)
@@ -1035,7 +1041,8 @@ moves_loop:  // When in check, search starts here
                     // We make sure to limit the extensions in some way to avoid a search explosion
                     if (!PvNode && ss->multipleExtensions <= 16)
                     {
-                        extension = 2 + (value < singularBeta - 78 && !ttCapture);
+                        int tripleExtMargin = failedNull ? 52 : 79;
+                        extension = 2 + (value < singularBeta - tripleExtMargin && !ttCapture);
                         depth += depth < 16;
                     }
                 }
