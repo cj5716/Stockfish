@@ -196,7 +196,7 @@ class Worker {
     ButterflyHistory      mainHistory;
     CapturePieceToHistory captureHistory;
     ContinuationHistory   continuationHistory[2][2];
-    PawnHistory           pawnHistory;
+    KingPawnHistory       kingPawnHistory;
     CorrectionHistory     correctionHistory;
 
    private:

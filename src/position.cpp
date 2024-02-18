@@ -335,7 +335,7 @@ void Position::set_check_info() const {
 void Position::set_state() const {
 
     st->key = st->materialKey  = 0;
-    st->pawnKey                = Zobrist::noPawns;
+    st->kingPawnKey            = Zobrist::noPawns;
     st->nonPawnMaterial[WHITE] = st->nonPawnMaterial[BLACK] = VALUE_ZERO;
     st->checkersBB = attackers_to(square<KING>(sideToMove)) & pieces(~sideToMove);
 
@@ -347,10 +347,10 @@ void Position::set_state() const {
         Piece  pc = piece_on(s);
         st->key ^= Zobrist::psq[pc][s];
 
-        if (type_of(pc) == PAWN)
-            st->pawnKey ^= Zobrist::psq[pc][s];
+        if (type_of(pc) == PAWN || type_of(pc) == KING)
+            st->kingPawnKey ^= Zobrist::psq[pc][s];
 
-        else if (type_of(pc) != KING)
+        else
             st->nonPawnMaterial[color_of(pc)] += PieceValue[pc];
     }
 
@@ -727,7 +727,7 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
                 assert(piece_on(capsq) == make_piece(them, PAWN));
             }
 
-            st->pawnKey ^= Zobrist::psq[captured][capsq];
+            st->kingPawnKey ^= Zobrist::psq[captured][capsq];
         }
         else
             st->nonPawnMaterial[them] -= PieceValue[captured];
@@ -806,7 +806,7 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
 
             // Update hash keys
             k ^= Zobrist::psq[pc][to] ^ Zobrist::psq[promotion][to];
-            st->pawnKey ^= Zobrist::psq[pc][to];
+            st->kingPawnKey ^= Zobrist::psq[pc][to];
             st->materialKey ^=
               Zobrist::psq[promotion][pieceCount[promotion] - 1] ^ Zobrist::psq[pc][pieceCount[pc]];
 
@@ -815,11 +815,13 @@ void Position::do_move(Move m, StateInfo& newSt, bool givesCheck) {
         }
 
         // Update pawn hash key
-        st->pawnKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
+        st->kingPawnKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
 
         // Reset rule 50 draw counter
         st->rule50 = 0;
     }
+    else if (type_of(pc) == KING && m.type_of() != CASTLING)
+        st->kingPawnKey ^= Zobrist::psq[pc][from] ^ Zobrist::psq[pc][to];
 
     // Set capture piece
     st->capturedPiece = captured;
@@ -930,6 +932,8 @@ void Position::do_castling(Color us, Square from, Square& to, Square& rfrom, Squ
     rfrom         = to;  // Castling is encoded as "king captures friendly rook"
     rto           = relative_square(us, kingSide ? SQ_F1 : SQ_D1);
     to            = relative_square(us, kingSide ? SQ_G1 : SQ_C1);
+    st->kingPawnKey ^= Zobrist::psq[make_piece(us, KING)][from];
+    st->kingPawnKey ^= Zobrist::psq[make_piece(us, KING)][to];
 
     if (Do)
     {
