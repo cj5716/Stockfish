@@ -216,7 +216,7 @@ Value Eval::evaluate(const Position& pos, int optimism) {
 
     // Damp down the evaluation linearly when shuffling
     int shuffling = pos.rule50_count();
-    v             = v * (200 - shuffling) / 214;
+    v             = v * (200 - shuffling * std::min(1048576 + v * v, 2097152) / 1048576) / 214;
 
     // Guarantee evaluation does not hit the tablebase range
     v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
