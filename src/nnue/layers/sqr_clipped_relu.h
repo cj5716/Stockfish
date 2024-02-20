@@ -61,7 +61,30 @@ class SqrClippedReLU {
     // Forward propagation
     void propagate(const InputType* input, OutputType* output) const {
 
-#if defined(USE_SSE2)
+#if defined(USE_AVX2)
+        constexpr IndexType NumChunks = InputDimensions / 32;
+
+        static_assert(WeightScaleBits == 6);
+        const auto in  = reinterpret_cast<const __m256i*>(input);
+        const auto out = reinterpret_cast<__m256i*>(output);
+        for (IndexType i = 0; i < NumChunks; ++i)
+        {
+            __m256i words0 = _mm256_packs_epi32(_mm256_load_si256(&in[i * 4 + 0]),
+                                                _mm256_load_si256(&in[i * 4 + 1]));
+            __m256i words1 = _mm256_packs_epi32(_mm256_load_si256(&in[i * 4 + 2]),
+                                                _mm256_load_si256(&in[i * 4 + 3]));
+
+            // We shift by WeightScaleBits * 2 = 12 and divide by 128
+            // which is an additional shift-right of 7, meaning 19 in total.
+            // MulHi strips the lower 16 bits so we need to shift out 3 more to match.
+            words0 = _mm256_srli_epi16(_mm256_mulhi_epi16(words0, words0), 3);
+            words1 = _mm256_srli_epi16(_mm256_mulhi_epi16(words1, words1), 3);
+
+            _mm256_store_si256(&out[i], _mm256_packs_epi16(words0, words1));
+        }
+        constexpr IndexType Start = NumChunks * 32;
+
+#elif defined(USE_SSE2)
         constexpr IndexType NumChunks = InputDimensions / 16;
 
         static_assert(WeightScaleBits == 6);
