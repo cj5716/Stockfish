@@ -193,7 +193,7 @@ int Eval::simple_eval(const Position& pos, Color c) {
 }
 
 // Returns the small net threshold for the position
-int Eval::small_net_threshold(const Position& pos) { return 1050; }
+int Eval::small_net_threshold(const Position& pos) { return 1000 + pos.count<ALL_PIECES>() * 5; }
 
 // Evaluate is the evaluator for the outer world. It returns a static evaluation
 // of the position from the point of view of the side to move.
