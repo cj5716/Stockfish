@@ -33,6 +33,7 @@ namespace {
 enum Stages {
     // generate main search moves
     MAIN_TT,
+    MAIN_SECOND_MOVE,
     CAPTURE_INIT,
     GOOD_CAPTURE,
     REFUTATION,
@@ -228,7 +229,7 @@ Move MovePicker::select(Pred filter) {
         if constexpr (T == Best)
             std::swap(*cur, *std::max_element(cur, endMoves));
 
-        if (*cur != ttMove && filter())
+        if (*cur != ttMove && *cur != secondMove && filter())
             return *cur++;
 
         cur++;
@@ -253,6 +254,13 @@ top:
     case PROBCUT_TT :
         ++stage;
         return ttMove;
+
+    case MAIN_SECOND_MOVE :
+        ++stage;
+        if (secondMove != Move::none())
+            return secondMove;
+
+        goto top;
 
     case CAPTURE_INIT :
     case PROBCUT_INIT :
