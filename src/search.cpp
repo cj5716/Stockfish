@@ -872,7 +872,7 @@ Value Search::Worker::search(
                               move, unadjustedStaticEval, tt.generation());
                     return std::abs(value) < VALUE_TB_WIN_IN_MAX_PLY
                             && std::abs(beta) < VALUE_TB_WIN_IN_MAX_PLY
-                           ? (value + 3 * beta) / 4
+                           ? (3 * value + beta) / 4
                            : value;
                 }
             }
