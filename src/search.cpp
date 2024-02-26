@@ -532,7 +532,7 @@ Value Search::Worker::search(
     Key      posKey;
     Move     ttMove, move, excludedMove, bestMove;
     Depth    extension, newDepth;
-    Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
+    Value    bestValue, value, improvement, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture;
     bool     capture, moveCountPruning, ttCapture;
     Piece    movedPiece;
@@ -691,6 +691,7 @@ Value Search::Worker::search(
         // Skip early pruning when in check
         ss->staticEval = eval = VALUE_NONE;
         improving             = false;
+        improvement           = 0;
         goto moves_loop;
     }
     else if (excludedMove)
@@ -736,14 +737,15 @@ Value Search::Worker::search(
               << bonus / 4;
     }
 
-    // Set up the improving flag, which is true if current static evaluation is
-    // bigger than the previous static evaluation at our turn (if we were in
-    // check at our previous move we look at static evaluation at move prior to it
-    // and if we were in check at move prior to it flag is set to true) and is
-    // false otherwise. The improving flag is used in various pruning heuristics.
-    improving = (ss - 2)->staticEval != VALUE_NONE
-                ? ss->staticEval > (ss - 2)->staticEval
-                : (ss - 4)->staticEval != VALUE_NONE && ss->staticEval > (ss - 4)->staticEval;
+    // Set up the improvement variable, which is the difference between the current
+    // static evaluation and the previous static evaluation at our turn (if we were
+    // in check at our previous move we look at the move prior to it). The improvement
+    // margin and the improving flag are used in various pruning heuristics.
+    improvement = (ss - 2)->staticEval != VALUE_NONE ? ss->staticEval - (ss - 2)->staticEval
+                : (ss - 4)->staticEval != VALUE_NONE ? ss->staticEval - (ss - 4)->staticEval
+                                                     : 1;
+
+    improving = improvement > 0;
 
     // Step 7. Razoring (~1 Elo)
     // If eval is really low check with qsearch if it can exceed alpha, if it can't,
@@ -825,7 +827,7 @@ Value Search::Worker::search(
     // Step 11. ProbCut (~10 Elo)
     // If we have a good enough capture (or queen promotion) and a reduced search returns a value
     // much above beta, we can (almost) safely prune the previous move.
-    probCutBeta = beta + 181 - 68 * improving;
+    probCutBeta = beta + 166 + std::clamp(improvement / 2, -100, 100);
     if (
       !PvNode && depth > 3
       && std::abs(beta) < VALUE_TB_WIN_IN_MAX_PLY
