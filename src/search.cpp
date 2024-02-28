@@ -227,7 +227,7 @@ void Search::Worker::iterative_deepening() {
 
     // Allocate stack with extra size to allow access from (ss - 7) to (ss + 2):
     // (ss - 7) is needed for update_continuation_histories(ss - 1) which accesses (ss - 6),
-    // (ss + 2) is needed for initialization of cutOffCnt and killers.
+    // (ss + 2) is needed for initialization of cutOffCnt and killer moves.
     Stack  stack[MAX_PLY + 10] = {};
     Stack* ss                  = stack + 7;
 
@@ -580,9 +580,9 @@ Value Search::Worker::search(
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
 
     (ss + 1)->excludedMove = bestMove = Move::none();
-    (ss + 2)->killers[0] = (ss + 2)->killers[1] = Move::none();
-    (ss + 2)->cutoffCnt                         = 0;
-    ss->multipleExtensions                      = (ss - 1)->multipleExtensions;
+    (ss + 2)->killer                  = Move::none();
+    (ss + 2)->cutoffCnt               = 0;
+    ss->multipleExtensions            = (ss - 1)->multipleExtensions;
     Square prevSq = ((ss - 1)->currentMove).is_ok() ? ((ss - 1)->currentMove).to_sq() : SQ_NONE;
     ss->statScore = 0;
 
@@ -898,7 +898,7 @@ moves_loop:  // When in check, search starts here
       prevSq != SQ_NONE ? thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] : Move::none();
 
     MovePicker mp(pos, ttMove, depth, &thisThread->mainHistory, &thisThread->captureHistory,
-                  contHist, &thisThread->pawnHistory, countermove, ss->killers);
+                  contHist, &thisThread->pawnHistory, countermove, ss->killer);
 
     value            = bestValue;
     moveCountPruning = false;
@@ -1741,7 +1741,7 @@ void update_all_stats(const Position& pos,
     // main killer move in previous ply when it gets refuted.
     if (prevSq != SQ_NONE
         && ((ss - 1)->moveCount == 1 + (ss - 1)->ttHit
-            || ((ss - 1)->currentMove == (ss - 1)->killers[0]))
+            || ((ss - 1)->currentMove == (ss - 1)->killer))
         && !pos.captured_piece())
         update_continuation_histories(ss - 1, pos.piece_on(prevSq), prevSq, -quietMoveMalus);
 
@@ -1774,12 +1774,8 @@ void update_continuation_histories(Stack* ss, Piece pc, Square to, int bonus) {
 void update_quiet_stats(
   const Position& pos, Stack* ss, Search::Worker& workerThread, Move move, int bonus) {
 
-    // Update killers
-    if (ss->killers[0] != move)
-    {
-        ss->killers[1] = ss->killers[0];
-        ss->killers[0] = move;
-    }
+    // Update killer
+    ss->killer = move;
 
     Color us = pos.side_to_move();
     workerThread.mainHistory[us][move.from_to()] << bonus;

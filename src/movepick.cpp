@@ -92,14 +92,14 @@ MovePicker::MovePicker(const Position&              p,
                        const PieceToHistory**       ch,
                        const PawnHistory*           ph,
                        Move                         cm,
-                       const Move*                  killers) :
+                       const Move                   killer) :
     pos(p),
     mainHistory(mh),
     captureHistory(cph),
     continuationHistory(ch),
     pawnHistory(ph),
     ttMove(ttm),
-    refutations{{killers[0], 0}, {killers[1], 0}, {cm, 0}},
+    refutations{{killer, 0}, {cm, 0}},
     depth(d) {
     assert(d > 0);
 
@@ -278,7 +278,7 @@ top:
         endMoves = std::end(refutations);
 
         // If the countermove is the same as a killer, skip it
-        if (refutations[0] == refutations[2] || refutations[1] == refutations[2])
+        if (refutations[0] == refutations[1])
             --endMoves;
 
         ++stage;
@@ -306,9 +306,8 @@ top:
         [[fallthrough]];
 
     case GOOD_QUIET :
-        if (!skipQuiets && select<Next>([&]() {
-                return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
-            }))
+        if (!skipQuiets
+            && select<Next>([&]() { return *cur != refutations[0] && *cur != refutations[1]; }))
         {
             if ((cur - 1)->value > -8000 || (cur - 1)->value <= quiet_threshold(depth))
                 return *(cur - 1);
@@ -337,9 +336,7 @@ top:
 
     case BAD_QUIET :
         if (!skipQuiets)
-            return select<Next>([&]() {
-                return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
-            });
+            return select<Next>([&]() { return *cur != refutations[0] && *cur != refutations[1]; });
 
         return Move::none();
 
