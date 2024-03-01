@@ -128,9 +128,14 @@ MovePicker::MovePicker(const Position&              p,
 
 // Constructor for ProbCut: we generate captures with SEE greater
 // than or equal to the given threshold.
-MovePicker::MovePicker(const Position& p, Move ttm, int th, const CapturePieceToHistory* cph) :
+MovePicker::MovePicker(const Position&              p,
+                       Move                         ttm,
+                       int                          th,
+                       const CapturePieceToHistory* cph,
+                       const PieceToHistory**       ch) :
     pos(p),
     captureHistory(cph),
+    continuationHistory(ch),
     ttMove(ttm),
     threshold(th) {
     assert(!pos.checkers());
@@ -166,9 +171,14 @@ void MovePicker::score() {
 
     for (auto& m : *this)
         if constexpr (Type == CAPTURES)
-            m.value =
-              7 * int(PieceValue[pos.piece_on(m.to_sq())])
-              + (*captureHistory)[pos.moved_piece(m)][m.to_sq()][type_of(pos.piece_on(m.to_sq()))];
+        {
+            Piece     pc   = pos.moved_piece(m);
+            Square    to   = m.to_sq();
+            PieceType capt = type_of(pos.piece_on(to));
+            m.value        = 7 * int(PieceValue[capt]) + (*captureHistory)[pc][to][capt]
+                    + (*continuationHistory[0])[pc][to] / 8
+                    + (*continuationHistory[1])[pc][to] / 16;
+        }
 
         else if constexpr (Type == QUIETS)
         {
