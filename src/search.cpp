@@ -1010,6 +1010,8 @@ moves_loop:  // When in check, search starts here
         // We take care to not overdo to avoid search getting stuck.
         if (ss->ply < thisThread->rootDepth * 2)
         {
+            Depth singularMinDepth = 4 - (thisThread->completedDepth > 30) + ss->ttPv;
+
             // Singular extension search (~94 Elo). If all moves but one fail low on a
             // search of (alpha-s, beta-s), and just one fails high on (alpha, beta),
             // then that move is singular and should be extended. To verify this we do
@@ -1020,8 +1022,7 @@ moves_loop:  // When in check, search starts here
             // scaling. Their values are optimized to time controls of 180+1.8 and longer
             // so changing them requires tests at these types of time controls.
             // Recursive singular search is avoided.
-            if (!rootNode && move == ttMove && !excludedMove
-                && depth >= 4 - (thisThread->completedDepth > 30) + ss->ttPv
+            if (!rootNode && move == ttMove && !excludedMove && depth >= singularMinDepth
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                 && tte->depth() >= depth - 3)
             {
@@ -1077,6 +1078,12 @@ moves_loop:  // When in check, search starts here
                      && thisThread->captureHistory[movedPiece][move.to_sq()]
                                                   [type_of(pos.piece_on(move.to_sq()))]
                           > 4394)
+                extension = 1;
+
+            else if (!rootNode && !ss->inCheck && move == ttMove && !excludedMove
+                     && depth < singularMinDepth && (tte->bound() & BOUND_LOWER)
+                     && tte->depth() >= depth - 3 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY
+                     && ttValue - 10 * depth >= ss->staticEval)
                 extension = 1;
         }
 
