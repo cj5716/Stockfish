@@ -1078,6 +1078,10 @@ moves_loop:  // When in check, search starts here
                                                   [type_of(pos.piece_on(move.to_sq()))]
                           > 4394)
                 extension = 1;
+
+            // Check extensions (~10000 Elo)
+            else if (depth < 9 && givesCheck && pos.see_ge(move))
+                extension = 1;
         }
 
         // Add extension to new depth
