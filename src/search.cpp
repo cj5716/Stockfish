@@ -878,6 +878,8 @@ Value Search::Worker::search(
         Eval::NNUE::hint_common_parent_position(pos);
     }
 
+    ttMove = ss->ttHit && !ttMove && tte->key() == uint16_t(pos.key()) ? tte->move() : Move::none();
+
 moves_loop:  // When in check, search starts here
 
     // Step 12. A small Probcut idea, when we are in check (~4 Elo)
