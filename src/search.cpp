@@ -1114,6 +1114,10 @@ moves_loop:  // When in check, search starts here
         if (PvNode)
             r--;
 
+        // Increase reduction for king evasions
+        if (ss->inCheck && type_of(movedPiece) == KING)
+            r++;
+
         // Increase reduction on repetition (~1 Elo)
         if (move == (ss - 4)->currentMove && pos.has_repeated())
             r += 2;
