@@ -1123,7 +1123,7 @@ moves_loop:  // When in check, search starts here
             r = 0;
 
         // Increase reduction if eval is far from alpha
-        r += std::clamp((alpha - eval) / 600, -1, 1);
+        r += std::clamp((alpha - eval) / 400, -1, 1);
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
                       + (*contHist[0])[movedPiece][move.to_sq()]
