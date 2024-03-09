@@ -33,9 +33,21 @@
 
 namespace Stockfish {
 
-constexpr int PAWN_HISTORY_SIZE        = 512;    // has to be a power of 2
-constexpr int CORRECTION_HISTORY_SIZE  = 16384;  // has to be a power of 2
-constexpr int CORRECTION_HISTORY_LIMIT = 1024;
+constexpr int PAWN_HISTORY_SIZE              = 512;   // has to be a power of 2
+constexpr int CORRECTION_HISTORY_SIZE        = 4096;  // has to be a power of 2
+constexpr int CORRECTION_HISTORY_LIMIT       = 1024;
+constexpr int CORRECTION_HISTORY_NUM_BUCKETS = 4;
+
+constexpr int CORRECTION_HISTORY_BUCKETS[SQUARE_NB] = {
+  0, 0, 0, 1, 1, 0, 0, 0,  //
+  0, 0, 0, 0, 0, 0, 0, 0,  //
+  2, 2, 2, 2, 3, 3, 3, 3,  //
+  2, 2, 2, 2, 3, 3, 3, 3,  //
+  2, 2, 2, 2, 3, 3, 3, 3,  //
+  2, 2, 2, 2, 3, 3, 3, 3,  //
+  2, 2, 2, 2, 3, 3, 3, 3,  //
+  2, 2, 2, 2, 3, 3, 3, 3,  //
+};
 
 static_assert((PAWN_HISTORY_SIZE & (PAWN_HISTORY_SIZE - 1)) == 0,
               "PAWN_HISTORY_SIZE has to be a power of 2");
@@ -51,6 +63,12 @@ enum PawnHistoryType {
 template<PawnHistoryType T = Normal>
 inline int pawn_structure_index(const Position& pos) {
     return pos.pawn_key() & ((T == Normal ? PAWN_HISTORY_SIZE : CORRECTION_HISTORY_SIZE) - 1);
+}
+
+inline int correction_bucket_index(const Position& pos) {
+    Color  us  = pos.side_to_move();
+    Square ksq = pos.square<KING>(us);
+    return CORRECTION_HISTORY_BUCKETS[us == WHITE ? int(ksq) : int(ksq) ^ 56];
 }
 
 // StatsEntry stores the stat table value. It is usually a number but could
@@ -135,9 +153,12 @@ using ContinuationHistory = Stats<PieceToHistory, NOT_USED, PIECE_NB, SQUARE_NB>
 // PawnHistory is addressed by the pawn structure and a move's [piece][to]
 using PawnHistory = Stats<int16_t, 8192, PAWN_HISTORY_SIZE, PIECE_NB, SQUARE_NB>;
 
-// CorrectionHistory is addressed by color and pawn structure
-using CorrectionHistory =
-  Stats<int16_t, CORRECTION_HISTORY_LIMIT, COLOR_NB, CORRECTION_HISTORY_SIZE>;
+// CorrectionHistory is addressed by color, king position and pawn structure
+using CorrectionHistory = Stats<int16_t,
+                                CORRECTION_HISTORY_LIMIT,
+                                COLOR_NB,
+                                CORRECTION_HISTORY_NUM_BUCKETS,
+                                CORRECTION_HISTORY_SIZE>;
 
 // MovePicker class is used to pick one pseudo-legal move at a time from the
 // current position. The most important method is next_move(), which returns a
