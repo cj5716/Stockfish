@@ -1128,9 +1128,9 @@ moves_loop:  // When in check, search starts here
         if ((ss + 1)->cutoffCnt > 3)
             r++;
 
-        // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
-        // Nullifies all previous reduction adjustments to ttMove and leaves only history to do them
-        else if (move == ttMove)
+        // Set reduction to 0 for first picked move (~2 Elo)
+        // Nullifies all previous reduction adjustments and leaves only history to do them
+        else if (moveCount == 1)
             r = 0;
 
         ss->statScore = 2 * thisThread->mainHistory[us][move.from_to()]
