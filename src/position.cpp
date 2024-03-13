@@ -1152,12 +1152,12 @@ bool Position::has_repeated() const {
 
     StateInfo* stc = st;
     int        end = std::min(st->rule50, st->pliesFromNull);
-    while (end-- >= 4)
+    for (; end >= 4; end -= 2)
     {
         if (stc->repetition)
             return true;
 
-        stc = stc->previous;
+        stc = stc->previous->previous;
     }
     return false;
 }
