@@ -177,7 +177,7 @@ class MovePicker {
     Move next_move(bool skipQuiets = false);
 
    private:
-    template<PickType T, typename Pred>
+    template<typename Pred>
     Move select(Pred);
     template<GenType>
     void     score();
