@@ -43,8 +43,10 @@ enum Stages {
 
     // generate evasion moves
     EVASION_TT,
-    EVASION_INIT,
-    EVASION,
+    EVASION_CAPTURE_INIT,
+    EVASION_CAPTURE,
+    EVASION_QUIET_INIT,
+    EVASION_QUIET,
 
     // generate probcut moves
     PROBCUT_TT,
@@ -145,7 +147,9 @@ MovePicker::MovePicker(const Position& p, Move ttm, int th, const CapturePieceTo
 template<GenType Type>
 void MovePicker::score() {
 
-    static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS, "Wrong type");
+    static_assert(Type == CAPTURES || Type == QUIETS || Type == EVASIONS_CAPT
+                    || Type == EVASIONS_QUIET,
+                  "Wrong type");
 
     [[maybe_unused]] Bitboard threatenedByPawn, threatenedByMinor, threatenedByRook,
       threatenedPieces;
@@ -202,28 +206,22 @@ void MovePicker::score() {
                                      : bool(to & threatenedByPawn) * 14900);
         }
 
-        else  // Type == EVASIONS
-        {
-            if (pos.capture_stage(m))
-                m.value =
-                  PieceValue[pos.piece_on(m.to_sq())] - type_of(pos.moved_piece(m)) + (1 << 28);
-            else
-                m.value = (*mainHistory)[pos.side_to_move()][m.from_to()]
-                        + (*continuationHistory[0])[pos.moved_piece(m)][m.to_sq()]
-                        + (*pawnHistory)[pawn_structure_index(pos)][pos.moved_piece(m)][m.to_sq()];
-        }
+        else if constexpr (Type == EVASIONS_CAPT)
+            m.value = PieceValue[pos.piece_on(m.to_sq())] - type_of(pos.moved_piece(m));
+
+        else  // Type == EVASIONS_QUIET
+            m.value = (*mainHistory)[pos.side_to_move()][m.from_to()]
+                    + (*continuationHistory[0])[pos.moved_piece(m)][m.to_sq()]
+                    + (*pawnHistory)[pawn_structure_index(pos)][pos.moved_piece(m)][m.to_sq()];
 }
 
 // Returns the next move satisfying a predicate function.
 // It never returns the TT move.
-template<MovePicker::PickType T, typename Pred>
+template<typename Pred>
 Move MovePicker::select(Pred filter) {
 
     while (cur < endMoves)
     {
-        if constexpr (T == Best)
-            std::swap(*cur, *std::max_element(cur, endMoves));
-
         if (*cur != ttMove && filter())
             return *cur++;
 
@@ -262,7 +260,7 @@ top:
         goto top;
 
     case GOOD_CAPTURE :
-        if (select<Next>([&]() {
+        if (select([&]() {
                 // Move losing capture to endBadCaptures to be tried later
                 return pos.see_ge(*cur, -cur->value / 18) ? true
                                                           : (*endBadCaptures++ = *cur, false);
@@ -281,7 +279,7 @@ top:
         [[fallthrough]];
 
     case REFUTATION :
-        if (select<Next>([&]() {
+        if (select([&]() {
                 return *cur != Move::none() && !pos.capture_stage(*cur) && pos.pseudo_legal(*cur);
             }))
             return *(cur - 1);
@@ -302,7 +300,7 @@ top:
         [[fallthrough]];
 
     case GOOD_QUIET :
-        if (!skipQuiets && select<Next>([&]() {
+        if (!skipQuiets && select([&]() {
                 return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
             }))
         {
@@ -321,7 +319,7 @@ top:
         [[fallthrough]];
 
     case BAD_CAPTURE :
-        if (select<Next>([]() { return true; }))
+        if (select([]() { return true; }))
             return *(cur - 1);
 
         // Prepare the pointers to loop over the bad quiets
@@ -333,28 +331,47 @@ top:
 
     case BAD_QUIET :
         if (!skipQuiets)
-            return select<Next>([&]() {
+            return select([&]() {
                 return *cur != refutations[0] && *cur != refutations[1] && *cur != refutations[2];
             });
 
         return Move::none();
 
-    case EVASION_INIT :
+    case EVASION_CAPTURE_INIT :
         cur      = moves;
-        endMoves = generate<EVASIONS>(pos, cur);
+        endMoves = generate<EVASIONS_CAPT>(pos, cur);
 
-        score<EVASIONS>();
+        score<EVASIONS_CAPT>();
+        partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
+
         ++stage;
         [[fallthrough]];
 
-    case EVASION :
-        return select<Best>([]() { return true; });
+    case EVASION_CAPTURE :
+        if (select([]() { return true; }))
+            return *(cur - 1);
+
+        ++stage;
+        [[fallthrough]];
+
+    case EVASION_QUIET_INIT :
+        cur      = moves;
+        endMoves = generate<EVASIONS_QUIET>(pos, cur);
+
+        score<EVASIONS_QUIET>();
+        partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
+
+        ++stage;
+        [[fallthrough]];
+
+    case EVASION_QUIET :
+        return select([]() { return true; });
 
     case PROBCUT :
-        return select<Next>([&]() { return pos.see_ge(*cur, threshold); });
+        return select([&]() { return pos.see_ge(*cur, threshold); });
 
     case QCAPTURE :
-        if (select<Next>([]() { return true; }))
+        if (select([]() { return true; }))
             return *(cur - 1);
 
         // If we found no move and the depth is too low to try checks, then we have finished
@@ -372,7 +389,7 @@ top:
         [[fallthrough]];
 
     case QCHECK :
-        return select<Next>([]() { return true; });
+        return select([]() { return true; });
     }
 
     assert(false);
