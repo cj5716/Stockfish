@@ -1316,7 +1316,7 @@ moves_loop:  // When in check, search starts here
     else if (!priorCapture && prevSq != SQ_NONE)
     {
         int bonus = (depth > 5) + (PvNode || cutNode) + ((ss - 1)->statScore < -14446)
-                  + ((ss - 1)->moveCount > 11)
+                  + ((ss - 1)->moveCount > 11) + bool((ss - 1)->excludedMove)
                   + (!ss->inCheck && bestValue <= ss->staticEval - 150);
         update_continuation_histories(ss - 1, pos.piece_on(prevSq), prevSq,
                                       stat_bonus(depth) * bonus);
