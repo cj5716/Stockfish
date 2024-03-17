@@ -1145,6 +1145,9 @@ bool Position::is_draw(int ply) const {
     return st->repetition && st->repetition < ply;
 }
 
+bool Position::shuffling() const {
+    return st->previous->previous->previous->previous->key == st->key;
+}
 
 // Tests whether there has been at least one repetition
 // of positions since the last capture or pawn move.
