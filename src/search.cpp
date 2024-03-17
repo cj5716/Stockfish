@@ -706,7 +706,7 @@ Value Search::Worker::search(
         unadjustedStaticEval = tte->eval();
         if (unadjustedStaticEval == VALUE_NONE)
             unadjustedStaticEval = evaluate(networks, pos, thisThread->optimism[us]);
-        else if (PvNode)
+        else if (PvNode && ttMove)
             Eval::NNUE::hint_common_parent_position(pos, networks);
 
         ss->staticEval = eval = to_corrected_static_eval(unadjustedStaticEval, *thisThread, pos);
