@@ -706,8 +706,6 @@ Value Search::Worker::search(
         unadjustedStaticEval = tte->eval();
         if (unadjustedStaticEval == VALUE_NONE)
             unadjustedStaticEval = evaluate(networks, pos, thisThread->optimism[us]);
-        else if (PvNode)
-            Eval::NNUE::hint_common_parent_position(pos, networks);
 
         ss->staticEval = eval = to_corrected_static_eval(unadjustedStaticEval, *thisThread, pos);
 
@@ -876,6 +874,9 @@ Value Search::Worker::search(
 
         Eval::NNUE::hint_common_parent_position(pos, networks);
     }
+
+    if (PvNode && ss->ttHit)
+        Eval::NNUE::hint_common_parent_position(pos, networks);
 
 moves_loop:  // When in check, search starts here
 
