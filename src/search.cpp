@@ -874,7 +874,8 @@ Value Search::Worker::search(
                 }
             }
 
-        Eval::NNUE::hint_common_parent_position(pos, networks);
+        if ((ss + 1)->cutoffCnt > 3)
+            Eval::NNUE::hint_common_parent_position(pos, networks);
     }
 
 moves_loop:  // When in check, search starts here
