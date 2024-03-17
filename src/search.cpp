@@ -536,7 +536,7 @@ Value Search::Worker::search(
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, opponentWorsening;
-    bool     capture, moveCountPruning, ttCapture;
+    bool     capture, moveCountPruning, ttCapture, failedRazor;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
 
@@ -588,6 +588,7 @@ Value Search::Worker::search(
     ss->multipleExtensions                      = (ss - 1)->multipleExtensions;
     Square prevSq = ((ss - 1)->currentMove).is_ok() ? ((ss - 1)->currentMove).to_sq() : SQ_NONE;
     ss->statScore = 0;
+    failedRazor   = false;
 
     // Step 4. Transposition table lookup.
     excludedMove = ss->excludedMove;
@@ -754,6 +755,8 @@ Value Search::Worker::search(
         value = qsearch<NonPV>(pos, ss, alpha - 1, alpha);
         if (value < alpha)
             return value;
+
+        failedRazor = true;
     }
 
     // Step 8. Futility pruning: child node (~40 Elo)
@@ -875,7 +878,7 @@ Value Search::Worker::search(
         Eval::NNUE::hint_common_parent_position(pos, networks);
     }
 
-    if (PvNode && ss->ttHit)
+    if (PvNode && ss->ttHit && !failedRazor)
         Eval::NNUE::hint_common_parent_position(pos, networks);
 
 moves_loop:  // When in check, search starts here
