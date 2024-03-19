@@ -1211,8 +1211,9 @@ moves_loop:  // When in check, search starts here
 
             rm.effort += nodes - nodeCount;
 
-            rm.averageScore =
-              rm.averageScore != -VALUE_INFINITE ? (2 * value + rm.averageScore) / 3 : value;
+            rm.averageScore = rm.averageScore != -VALUE_INFINITE
+                              ? ((3 + depth) * value + 7 * rm.averageScore) / (10 + depth)
+                              : value;
 
             // PV move or new best move?
             if (moveCount == 1 || value > alpha)
