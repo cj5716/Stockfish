@@ -536,7 +536,7 @@ Value Search::Worker::search(
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, opponentWorsening;
-    bool     capture, moveCountPruning, ttCapture;
+    bool     capture, moveCountPruning, ttCapture, ttValueAdjusted;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
 
@@ -548,6 +548,7 @@ Value Search::Worker::search(
     moveCount = captureCount = quietCount = ss->moveCount = 0;
     bestValue                                             = -VALUE_INFINITE;
     maxValue                                              = VALUE_INFINITE;
+    ttValueAdjusted                                       = false;
 
     // Check for the available remaining time
     if (is_mainthread())
@@ -713,7 +714,10 @@ Value Search::Worker::search(
 
         // ttValue can be used as a better position evaluation (~7 Elo)
         if (ttValue != VALUE_NONE && (tte->bound() & (ttValue > eval ? BOUND_LOWER : BOUND_UPPER)))
-            eval = ttValue;
+        {
+            eval            = ttValue;
+            ttValueAdjusted = true;
+        }
     }
     else
     {
@@ -765,7 +769,7 @@ Value Search::Worker::search(
                - (ss - 1)->statScore / 287
              >= beta
         && eval >= beta && eval < VALUE_TB_WIN_IN_MAX_PLY && (!ttMove || ttCapture))
-        return beta > VALUE_TB_LOSS_IN_MAX_PLY ? (eval + beta) / 2 : eval;
+        return beta > VALUE_TB_LOSS_IN_MAX_PLY && !ttValueAdjusted ? (eval + beta) / 2 : eval;
 
     // Step 9. Null move search with verification search (~35 Elo)
     if (!PvNode && (ss - 1)->currentMove != Move::null() && (ss - 1)->statScore < 16211
