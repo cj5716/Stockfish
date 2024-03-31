@@ -52,13 +52,10 @@ class Network {
     bool save(const std::optional<std::string>& filename) const;
 
 
-    Value evaluate(const Position& pos,
-                   bool            adjusted   = false,
-                   int*            complexity = nullptr,
-                   bool            psqtOnly   = false) const;
+    Value evaluate(const Position& pos, bool adjusted = false, int* complexity = nullptr) const;
 
 
-    void hint_common_access(const Position& pos, bool psqtOnl) const;
+    void hint_common_access(const Position& pos) const;
 
     void          verify(std::string evalfilePath) const;
     NnueEvalTrace trace_evaluate(const Position& pos) const;
