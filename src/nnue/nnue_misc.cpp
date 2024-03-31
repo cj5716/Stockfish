@@ -46,9 +46,9 @@ void hint_common_parent_position(const Position& pos, const Networks& networks) 
 
     int simpleEvalAbs = std::abs(simple_eval(pos, pos.side_to_move()));
     if (simpleEvalAbs > Eval::SmallNetThreshold)
-        networks.small.hint_common_access(pos, simpleEvalAbs > Eval::PsqtOnlyThreshold);
+        networks.small.hint_common_access(pos);
     else
-        networks.big.hint_common_access(pos, false);
+        networks.big.hint_common_access(pos);
 }
 
 namespace {
@@ -145,18 +145,14 @@ std::string trace(Position& pos, const Eval::NNUE::Networks& networks) {
                 auto st = pos.state();
 
                 pos.remove_piece(sq);
-                st->accumulatorBig.computed[WHITE]       = st->accumulatorBig.computed[BLACK] =
-                  st->accumulatorBig.computedPSQT[WHITE] = st->accumulatorBig.computedPSQT[BLACK] =
-                    false;
+                st->accumulatorBig.computed[WHITE] = st->accumulatorBig.computed[BLACK] = false;
 
                 Value eval = networks.big.evaluate(pos);
                 eval       = pos.side_to_move() == WHITE ? eval : -eval;
                 v          = base - eval;
 
                 pos.put_piece(pc, sq);
-                st->accumulatorBig.computed[WHITE]       = st->accumulatorBig.computed[BLACK] =
-                  st->accumulatorBig.computedPSQT[WHITE] = st->accumulatorBig.computedPSQT[BLACK] =
-                    false;
+                st->accumulatorBig.computed[WHITE] = st->accumulatorBig.computed[BLACK] = false;
             }
 
             writeSquare(f, r, pc, v);
