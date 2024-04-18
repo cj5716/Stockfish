@@ -141,8 +141,7 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
 
         if (replace->depth8 - replace->relative_age(generation8) * 2
               == tte[i].depth8 - tte[i].relative_age(generation8) * 2
-            && ((replace->move16 && !tte[i].move16)
-                || tte[i].relative_age(generation8) > replace->relative_age(generation8)))
+            && tte[i].relative_age(generation8) > replace->relative_age(generation8))
             replace = &tte[i];
     }
 
