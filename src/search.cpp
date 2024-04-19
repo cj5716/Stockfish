@@ -258,9 +258,12 @@ void Search::Worker::iterative_deepening() {
     // Perturb root moves to increase thread variance during lazy SMP
     else if (thread_idx % 2)
     {
-        PRNG           rng(1234567 * uint64_t(thread_idx));
-        const uint32_t swap_idx = (rng.rand<unsigned>() % (rootMoves.size() - 1));
-        std::swap(rootMoves[swap_idx], rootMoves[swap_idx + 1]);
+        PRNG rng(1234567 * uint64_t(thread_idx));
+        for (int i = 0; i < (rootMoves.size() - 1); ++i)
+        {
+            if (rng.rand<unsigned>() % 4 == 0)
+                std::swap(rootMoves[i], rootMoves[i]);
+        }
     }
 
     size_t multiPV = size_t(options["MultiPV"]);
