@@ -259,10 +259,10 @@ void Search::Worker::iterative_deepening() {
     else if (thread_idx % 2)
     {
         PRNG rng(1234567 * uint64_t(thread_idx));
-        for (int i = 0; i < (rootMoves.size() - 1); ++i)
+        for (int i = 1; i < (rootMoves.size() - 1); ++i)
         {
             if (rng.rand<unsigned>() % 4 == 0)
-                std::swap(rootMoves[i], rootMoves[i]);
+                std::swap(rootMoves[i], rootMoves[i + 1]);
         }
     }
 
