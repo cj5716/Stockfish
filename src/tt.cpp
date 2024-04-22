@@ -127,10 +127,11 @@ TTEntry* TranspositionTable::probe(const Key key, bool& found) const {
             return found = bool(tte[i].depth8), &tte[i];
 
     // Find an entry to be replaced according to the replacement strategy
-    TTEntry* replace = tte;
+    TTEntry*   replace    = tte;
+    const auto age_weight = [](const int x) { return 3 * x * x / 32 + 6; };
     for (int i = 1; i < ClusterSize; ++i)
-        if (replace->depth8 - replace->relative_age(generation8) * 2
-            > tte[i].depth8 - tte[i].relative_age(generation8) * 2)
+        if (replace->depth8 - age_weight(replace->relative_age(generation8))
+            > tte[i].depth8 - age_weight(tte[i].relative_age(generation8)))
             replace = &tte[i];
 
     return found = false, replace;
