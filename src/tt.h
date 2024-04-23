@@ -105,6 +105,14 @@ class TranspositionTable {
         return &table[mul_hi64(key, clusterCount)].entry[0];
     }
 
+    void prefetch_entry(const Key key) const {
+        TTEntry* tte = &table[mul_hi64(key, clusterCount)].entry[0];
+        prefetch(tte);
+        // this prefetches the cachline containing the last byte of the entry,
+        // guaranteeing the whole entry is in the cache
+        prefetch((char*) tte + sizeof(TTEntry) - 1);
+    }
+
     uint8_t generation() const { return generation8; }
 
    private:
