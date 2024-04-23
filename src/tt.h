@@ -72,10 +72,9 @@ class TranspositionTable {
 
     struct Cluster {
         TTEntry entry[ClusterSize];
-        char    padding[2];  // Pad to 32 bytes
     };
 
-    static_assert(sizeof(Cluster) == 32, "Unexpected Cluster size");
+    static_assert(sizeof(Cluster) == 30, "Unexpected Cluster size");
 
     // Constants used to refresh the hash table periodically
 
