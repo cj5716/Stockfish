@@ -631,6 +631,22 @@ Value Search::Worker::search(
                    ? (ttValue * 3 + beta) / 4
                    : ttValue;
     }
+    else if (PvNode && ss->ttPv
+             && ttValue != VALUE_NONE  // Possible in case of TT access race or if !ttHit
+             && tte->depth() >= depth + 3)
+    {
+        if (tte->bound() == BOUND_EXACT)
+            return ttValue;
+
+        if (tte->bound() == BOUND_LOWER)
+            alpha = std::max(alpha, ttValue);
+
+        if (tte->bound() == BOUND_UPPER)
+            beta = std::min(beta, ttValue);
+
+        if (alpha >= beta)
+            return alpha;
+    }
 
     // Step 5. Tablebases probe
     if (!rootNode && !excludedMove && tbConfig.cardinality)
