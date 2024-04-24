@@ -373,10 +373,7 @@ class Move {
         return Square((data >> 6) & 0x3F);
     }
 
-    constexpr Square to_sq() const {
-        assert(is_ok());
-        return Square(data & 0x3F);
-    }
+    constexpr Square to_sq() const { return Square(data & 0x3F); }
 
     constexpr int from_to() const { return data & 0xFFF; }
 

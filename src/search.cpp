@@ -589,6 +589,12 @@ Value Search::Worker::search(
     ss->multipleExtensions                      = (ss - 1)->multipleExtensions;
     Square prevSq = ((ss - 1)->currentMove).is_ok() ? ((ss - 1)->currentMove).to_sq() : SQ_NONE;
     ss->statScore = 0;
+    const PieceToHistory* contHist[] = {(ss - 1)->continuationHistory,
+                                        (ss - 2)->continuationHistory,
+                                        (ss - 3)->continuationHistory,
+                                        (ss - 4)->continuationHistory,
+                                        nullptr,
+                                        (ss - 6)->continuationHistory};
 
     // Step 4. Transposition table lookup.
     excludedMove = ss->excludedMove;
@@ -776,9 +782,12 @@ Value Search::Worker::search(
     {
         assert(eval - beta >= 0);
 
-        // Null move dynamic reduction based on depth and eval
-        Depth R = std::min(int(eval - beta) / 152, 6) + depth / 3 + 4
-                + thisThread->mainHistory[us][Move::null().from_to()] / 5555;
+        const int history = (*contHist[0])[NO_PIECE][Move::null().to_sq()]
+                          + (*contHist[1])[NO_PIECE][Move::null().to_sq()]
+                          + (*contHist[3])[NO_PIECE][Move::null().to_sq()];
+
+        // Null move dynamic reduction based on depth, eval and history score
+        const Depth R = std::min(int(eval - beta) / 152, 6) + depth / 3 + 4 - history / 11111;
 
         ss->currentMove         = Move::null();
         ss->continuationHistory = &thisThread->continuationHistory[0][0][NO_PIECE][0];
@@ -794,7 +803,8 @@ Value Search::Worker::search(
         {
             if (thisThread->nmpMinPly || depth < 16)
             {
-                thisThread->mainHistory[us][Move::null().from_to()] << stat_bonus(depth);
+                update_continuation_histories(ss, NO_PIECE, Move::null().to_sq(),
+                                              stat_bonus(depth));
                 return nullValue;
             }
 
@@ -810,14 +820,16 @@ Value Search::Worker::search(
 
             if (v >= beta)
             {
-                thisThread->mainHistory[us][Move::null().from_to()] << stat_bonus(depth);
+                update_continuation_histories(ss, NO_PIECE, Move::null().to_sq(),
+                                              stat_bonus(depth));
                 return nullValue;
             }
             else
-                thisThread->mainHistory[us][Move::null().from_to()] << -stat_malus(depth);
+                update_continuation_histories(ss, NO_PIECE, Move::null().to_sq(),
+                                              -stat_malus(depth));
         }
         else
-            thisThread->mainHistory[us][Move::null().from_to()] << -stat_malus(depth);
+            update_continuation_histories(ss, NO_PIECE, Move::null().to_sq(), -stat_malus(depth));
     }
 
     // Step 10. Internal iterative reductions (~9 Elo)
@@ -897,13 +909,6 @@ moves_loop:  // When in check, search starts here
         && tte->depth() >= depth - 4 && ttValue >= probCutBeta
         && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && std::abs(beta) < VALUE_TB_WIN_IN_MAX_PLY)
         return probCutBeta;
-
-    const PieceToHistory* contHist[] = {(ss - 1)->continuationHistory,
-                                        (ss - 2)->continuationHistory,
-                                        (ss - 3)->continuationHistory,
-                                        (ss - 4)->continuationHistory,
-                                        nullptr,
-                                        (ss - 6)->continuationHistory};
 
     Move countermove =
       prevSq != SQ_NONE ? thisThread->counterMoves[pos.piece_on(prevSq)][prevSq] : Move::none();
