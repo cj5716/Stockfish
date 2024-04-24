@@ -787,7 +787,7 @@ Value Search::Worker::search(
                           + (*contHist[3])[NO_PIECE][Move::null().to_sq()];
 
         // Null move dynamic reduction based on depth, eval and history score
-        const Depth R = std::min(int(eval - beta) / 152, 6) + depth / 3 + 4 - history / 11111;
+        const Depth R = std::min(int(eval - beta) / 152, 6) + depth / 3 + 4 + history / 11111;
 
         ss->currentMove         = Move::null();
         ss->continuationHistory = &thisThread->continuationHistory[0][0][NO_PIECE][0];
