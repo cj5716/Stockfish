@@ -777,7 +777,8 @@ Value Search::Worker::search(
         assert(eval - beta >= 0);
 
         // Null move dynamic reduction based on depth and eval
-        Depth R = std::min(int(eval - beta) / 152, 6) + depth / 3 + 4;
+        Depth R = std::min(int(eval - beta) / 152, 6) + depth / 3 + 4
+                - thisThread->mainHistory[us][Move::null().from_to()] / 5555;
 
         ss->currentMove         = Move::null();
         ss->continuationHistory = &thisThread->continuationHistory[0][0][NO_PIECE][0];
@@ -792,7 +793,10 @@ Value Search::Worker::search(
         if (nullValue >= beta && nullValue < VALUE_TB_WIN_IN_MAX_PLY)
         {
             if (thisThread->nmpMinPly || depth < 16)
+            {
+                thisThread->mainHistory[us][Move::null().from_to()] << stat_bonus(depth);
                 return nullValue;
+            }
 
             assert(!thisThread->nmpMinPly);  // Recursive verification is not allowed
 
@@ -805,8 +809,15 @@ Value Search::Worker::search(
             thisThread->nmpMinPly = 0;
 
             if (v >= beta)
+            {
+                thisThread->mainHistory[us][Move::null().from_to()] << stat_bonus(depth);
                 return nullValue;
+            }
+            else
+                thisThread->mainHistory[us][Move::null().from_to()] << -stat_malus(depth);
         }
+        else
+            thisThread->mainHistory[us][Move::null().from_to()] << -stat_malus(depth);
     }
 
     // Step 10. Internal iterative reductions (~9 Elo)
