@@ -664,6 +664,7 @@ class FeatureTransformer {
         auto& entry = (*cache)[ksq];
 
         auto& accumulator                     = pos.state()->*accPtr;
+        int   gain                            = FeatureSet::refresh_cost(pos);
         accumulator.computed[Perspective]     = true;
         accumulator.computedPSQT[Perspective] = true;
 
@@ -683,13 +684,23 @@ class FeatureTransformer {
                 {
                     Square sq = pop_lsb(toRemove);
                     removed.push_back(FeatureSet::make_index<Perspective>(sq, piece, ksq));
+                    gain--;
                 }
                 while (toAdd)
                 {
                     Square sq = pop_lsb(toAdd);
                     added.push_back(FeatureSet::make_index<Perspective>(sq, piece, ksq));
+                    gain--;
                 }
             }
+        }
+
+        if (gain < 0)
+        {
+            added   = {};
+            removed = {};
+            entry.clear(biases);
+            FeatureSet::append_active_indices<Perspective>(pos, added);
         }
 
 #ifdef VECTOR
