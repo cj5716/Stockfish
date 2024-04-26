@@ -1067,7 +1067,7 @@ moves_loop:  // When in check, search starts here
                 // and we can prune the whole subtree by returning a softbound.
                 else if (singularBeta >= beta)
                 {
-                    if (ttValue <= value && !ttCapture)
+                    if (!ttCapture)
                         update_quiet_stats(pos, ss, *this, ttMove, -stat_malus(singularDepth));
 
                     return singularBeta;
