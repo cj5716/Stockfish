@@ -417,6 +417,7 @@ class FeatureTransformer {
                                         bool            psqtOnly) const {
         static_assert(N > 0);
         assert(states_to_update[N - 1] == nullptr);
+        assert(N == 1 || states_to_update[N - 2] != nullptr);
 
 #ifdef VECTOR
         // Gcc-10.2 unnecessarily spills AVX2 registers if this array
@@ -439,26 +440,16 @@ class FeatureTransformer {
         // updates with more added/removed features than MaxActiveDimensions.
         FeatureSet::IndexList removed[N - 1], added[N - 1];
 
+        for (int i = N - 2; i >= 0; --i)
         {
-            int i =
-              N
-              - 2;  // Last potential state to update. Skip last element because it must be nullptr.
-            while (states_to_update[i] == nullptr)
-                --i;
+            (states_to_update[i]->*accPtr).computed[Perspective]     = !psqtOnly;
+            (states_to_update[i]->*accPtr).computedPSQT[Perspective] = true;
 
-            StateInfo* st2 = states_to_update[i];
+            const StateInfo* end_state = i == 0 ? computed_st : states_to_update[i - 1];
 
-            for (; i >= 0; --i)
-            {
-                (states_to_update[i]->*accPtr).computed[Perspective]     = !psqtOnly;
-                (states_to_update[i]->*accPtr).computedPSQT[Perspective] = true;
-
-                const StateInfo* end_state = i == 0 ? computed_st : states_to_update[i - 1];
-
-                for (; st2 != end_state; st2 = st2->previous)
-                    FeatureSet::append_changed_indices<Perspective>(ksq, st2->dirtyPiece,
-                                                                    removed[i], added[i]);
-            }
+            for (StateInfo* st2 = states_to_update[i]; st2 != end_state; st2 = st2->previous)
+                FeatureSet::append_changed_indices<Perspective>(ksq, st2->dirtyPiece, removed[i],
+                                                                added[i]);
         }
 
         StateInfo* st = computed_st;
@@ -969,11 +960,20 @@ class FeatureTransformer {
             //     1. for the current position
             //     2. the next accumulator after the computed one
             // The heuristic may change in the future.
-            StateInfo* states_to_update[3] = {next, next == pos.state() ? nullptr : pos.state(),
-                                              nullptr};
+            if (next == pos.state())
+            {
+                StateInfo* states_to_update[2] = {next, nullptr};
 
-            update_accumulator_incremental<Perspective, 3>(pos, oldest_st, states_to_update,
-                                                           psqtOnly);
+                update_accumulator_incremental<Perspective, 2>(pos, oldest_st, states_to_update,
+                                                               psqtOnly);
+            }
+            else
+            {
+                StateInfo* states_to_update[3] = {next, pos.state(), nullptr};
+
+                update_accumulator_incremental<Perspective, 3>(pos, oldest_st, states_to_update,
+                                                               psqtOnly);
+            }
         }
         else
             update_accumulator_refresh<Perspective>(pos, cache, psqtOnly);
