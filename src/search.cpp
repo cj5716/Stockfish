@@ -52,9 +52,6 @@ namespace TB = Tablebases;
 using Eval::evaluate;
 using namespace Search;
 
-int v1 = 1024, v2 = 100, v3 = 1984, v4 = 100;
-TUNE(v1, v2, v3, v4);
-
 namespace {
 
 static constexpr double EvalLevel[10] = {1.043, 1.017, 0.952, 1.009, 0.971,
@@ -511,8 +508,8 @@ void Search::Worker::clear() {
 
     for (size_t i = 1; i < extensionMargins.size(); ++i)
     {
-        extensionMargins[i][0] = v1 * std::pow(i, v2 / 100.0) / 1024;
-        extensionMargins[i][1] = v3 * std::pow(i, v4 / 100.0) / 1024;
+        extensionMargins[i][0] = 962 * std::pow(i, 0.93) / 1024;
+        extensionMargins[i][1] = 1859 * std::pow(i, 1.02) / 1024;
     }
 }
 
