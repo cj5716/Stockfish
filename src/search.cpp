@@ -52,6 +52,9 @@ namespace TB = Tablebases;
 using Eval::evaluate;
 using namespace Search;
 
+int v1 = 1024, v2 = 100, v3 = 1984, v4 = 100;
+TUNE(v1, v2, v3, v4);
+
 namespace {
 
 static constexpr double EvalLevel[10] = {1.043, 1.017, 0.952, 1.009, 0.971,
@@ -505,6 +508,12 @@ void Search::Worker::clear() {
 
     for (size_t i = 1; i < reductions.size(); ++i)
         reductions[i] = int((20.14 + std::log(size_t(options["Threads"])) / 2) * std::log(i));
+
+    for (size_t i = 1; i < extensionMargins.size(); ++i)
+    {
+        extensionMargins[i][0] = v1 * std::pow(i, v2 / 100.0) / 1024;
+        extensionMargins[i][1] = v3 * std::pow(i, v4 / 100.0) / 1024;
+    }
 }
 
 
@@ -1037,7 +1046,7 @@ moves_loop:  // When in check, search starts here
                 && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && (tte->bound() & BOUND_LOWER)
                 && tte->depth() >= depth - 3)
             {
-                Value singularBeta  = ttValue - (65 + 59 * (ss->ttPv && !PvNode)) * depth / 63;
+                Value singularBeta  = ttValue - extensionMargins[depth][ss->ttPv && !PvNode];
                 Depth singularDepth = newDepth / 2;
 
                 ss->excludedMove = move;
