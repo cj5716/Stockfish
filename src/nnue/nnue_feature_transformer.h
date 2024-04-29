@@ -316,12 +316,8 @@ class FeatureTransformer {
                 }
             }
         }
-        for (IndexType i = 0; i < HalfDimensions; ++i)
-        {
-            biases[i] = biasesCopy[i];
-            for (IndexType j = 0; j < InputDimensions; ++j)
-                weights[i * InputDimensions + j] = weightsCopy[i * InputDimensions + j];
-        }
+        biases  = const_cast<BiasType*>(biasesCopy);
+        weights = const_cast<WeightType*>(weightsCopy);
 #endif
     }
 
