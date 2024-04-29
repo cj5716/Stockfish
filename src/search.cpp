@@ -545,7 +545,7 @@ Value Search::Worker::search(
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, opponentWorsening;
-    bool     capture, moveCountPruning, ttCapture;
+    bool     capture, moveCountPruning, ttCapture, multiExtended;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
 
@@ -597,6 +597,7 @@ Value Search::Worker::search(
     ss->multipleExtensions                      = (ss - 1)->multipleExtensions;
     Square prevSq = ((ss - 1)->currentMove).is_ok() ? ((ss - 1)->currentMove).to_sq() : SQ_NONE;
     ss->statScore = 0;
+    multiExtended = false;
 
     // Step 4. Transposition table lookup.
     excludedMove = ss->excludedMove;
@@ -1059,6 +1060,8 @@ moves_loop:  // When in check, search starts here
                     if (PvNode && !ttCapture && ss->multipleExtensions <= 5
                         && value < singularBeta - 38)
                         extension = 2;
+
+                    multiExtended = extension >= 2;
                 }
 
                 // Multi-cut pruning
@@ -1129,6 +1132,10 @@ moves_loop:  // When in check, search starts here
         // Increase reduction for cut nodes (~4 Elo)
         if (cutNode)
             r += 2 - (tte->depth() >= depth && ss->ttPv);
+
+        // Increase reduction if our very singular TT move failed to produce a cutoff (~10000 Elo)
+        if (multiExtended)
+            r++;
 
         // Increase reduction if ttMove is a capture (~3 Elo)
         if (ttCapture)
