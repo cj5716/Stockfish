@@ -1280,7 +1280,7 @@ moves_loop:  // When in check, search starts here
                 rm.score = -VALUE_INFINITE;
         }
 
-        if (move == ttMove && ttSingular)
+        if (move == ttMove && ttSingular && !ttCapture)
         {
             int bonus = value <= alpha ? -stat_malus(depth) : value >= beta ? stat_bonus(depth) : 0;
 
