@@ -497,6 +497,7 @@ void Search::Worker::clear() {
     captureHistory.fill(0);
     pawnHistory.fill(0);
     correctionHistory.fill(0);
+    extensionHistory.fill(0);
 
     for (bool inCheck : {false, true})
         for (StatsType c : {NoCaptures, Captures})
@@ -545,7 +546,7 @@ Value Search::Worker::search(
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, opponentWorsening;
-    bool     capture, moveCountPruning, ttCapture;
+    bool     capture, moveCountPruning, ttCapture, ttSingular;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
 
@@ -597,6 +598,7 @@ Value Search::Worker::search(
     ss->multipleExtensions                      = (ss - 1)->multipleExtensions;
     Square prevSq = ((ss - 1)->currentMove).is_ok() ? ((ss - 1)->currentMove).to_sq() : SQ_NONE;
     ss->statScore = 0;
+    ttSingular    = false;
 
     // Step 4. Transposition table lookup.
     excludedMove = ss->excludedMove;
@@ -1048,13 +1050,21 @@ moves_loop:  // When in check, search starts here
 
                 if (value < singularBeta)
                 {
-                    extension = 1;
+                    ttSingular = true;
+                    extension  = 1;
 
                     // We make sure to limit the extensions in some way to avoid a search explosion
                     if (!PvNode && ss->multipleExtensions <= 16)
                     {
-                        extension = 2 + (value < singularBeta - 11 && !ttCapture);
+                        extension = 2;
                         depth += depth < 14;
+                        if (!ttCapture && value < singularBeta - 11)
+                        {
+                            extension = 3;
+                            if (value < singularBeta - 343
+                                && thisThread->extensionHistory[us][move.from_to()] >= 5716)
+                                extension = 4;
+                        }
                     }
                     if (PvNode && !ttCapture && ss->multipleExtensions <= 5
                         && value < singularBeta - 38)
@@ -1268,6 +1278,13 @@ moves_loop:  // When in check, search starts here
                 // is not a problem when sorting because the sort is stable and the
                 // move position in the list is preserved - just the PV is pushed up.
                 rm.score = -VALUE_INFINITE;
+        }
+
+        if (move == ttMove && ttSingular)
+        {
+            int bonus = value <= alpha ? -stat_malus(depth) : value >= beta ? stat_bonus(depth) : 0;
+
+            thisThread->extensionHistory[us][move.from_to()] << bonus * extension / 2;
         }
 
         if (value > bestValue)
