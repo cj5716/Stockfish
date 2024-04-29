@@ -281,6 +281,50 @@ class FeatureTransformer {
 #endif
     }
 
+    void permute_chunks(bool inverse) const {
+
+#if defined(VECTOR)
+        BiasType   biasesCopy[HalfDimensions];
+        WeightType weightsCopy[HalfDimensions * InputDimensions];
+
+        for (IndexType i = 0; i < HalfDimensions; i += 2 * sizeof(vec_t) / sizeof(WeightType))
+        {
+            for (IndexType j = 0; j < sizeof(vec_t) / sizeof(WeightType); ++j)
+            {
+                auto copyPair0 = i + j;
+                auto origPair0 = i / 2 + j;
+                auto copyPair1 = i + j + sizeof(vec_t) / sizeof(WeightType);
+                auto origPair1 = i / 2 + HalfDimensions / 2 + j;
+                if (inverse)
+                {
+                    auto tmp0 = copyPair0;
+                    auto tmp1 = copyPair1;
+                    copyPair0 = origPair0;
+                    copyPair1 = origPair1;
+                    origPair0 = tmp0;
+                    origPair1 = tmp1;
+                }
+
+                biasesCopy[copyPair0] = biases[origPair0];
+                biasesCopy[copyPair1] = biases[origPair1];
+                for (IndexType k = 0; k < InputDimensions; ++k)
+                {
+                    weightsCopy[k * HalfDimensions + copyPair0] =
+                      weights[k * HalfDimensions + origPair0];
+                    weightsCopy[k * HalfDimensions + copyPair1] =
+                      weights[k * HalfDimensions + origPair1];
+                }
+            }
+        }
+        for (IndexType i = 0; i < HalfDimensions; ++i)
+        {
+            biases[i] = biasesCopy[i];
+            for (IndexType j = 0; j < InputDimensions; ++j)
+                weights[i * InputDimensions + j] = weightsCopy[i * InputDimensions + j];
+        }
+#endif
+    }
+
     // Read network parameters
     bool read_parameters(std::istream& stream) {
 
@@ -289,6 +333,7 @@ class FeatureTransformer {
         read_leb_128<PSQTWeightType>(stream, psqtWeights, PSQTBuckets * InputDimensions);
 
         permute_weights(inverse_order_packs);
+        permute_chunks(true);
         return !stream.fail();
     }
 
@@ -296,12 +341,14 @@ class FeatureTransformer {
     bool write_parameters(std::ostream& stream) const {
 
         permute_weights(order_packs);
+        permute_chunks(false);
 
         write_leb_128<BiasType>(stream, biases, HalfDimensions);
         write_leb_128<WeightType>(stream, weights, HalfDimensions * InputDimensions);
         write_leb_128<PSQTWeightType>(stream, psqtWeights, PSQTBuckets * InputDimensions);
 
         permute_weights(inverse_order_packs);
+        permute_chunks(true);
         return !stream.fail();
     }
 
@@ -338,17 +385,15 @@ class FeatureTransformer {
             const vec_t Zero = vec_zero();
             const vec_t One  = vec_set_16(127);
 
-            const vec_t* in0 = reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][0]));
-            const vec_t* in1 =
-              reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][HalfDimensions / 2]));
-            vec_t* out = reinterpret_cast<vec_t*>(output + offset);
+            const vec_t* in  = reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][0]));
+            vec_t*       out = reinterpret_cast<vec_t*>(output + offset);
 
             for (IndexType j = 0; j < NumOutputChunks; ++j)
             {
-                const vec_t sum0a = vec_max_16(vec_min_16(in0[j * 2 + 0], One), Zero);
-                const vec_t sum0b = vec_max_16(vec_min_16(in0[j * 2 + 1], One), Zero);
-                const vec_t sum1a = vec_max_16(vec_min_16(in1[j * 2 + 0], One), Zero);
-                const vec_t sum1b = vec_max_16(vec_min_16(in1[j * 2 + 1], One), Zero);
+                const vec_t sum0a = vec_max_16(vec_min_16(in[j * 2 + 0], One), Zero);
+                const vec_t sum1a = vec_max_16(vec_min_16(in[j * 2 + 1], One), Zero);
+                const vec_t sum0b = vec_max_16(vec_min_16(in[j * 2 + 2], One), Zero);
+                const vec_t sum1b = vec_max_16(vec_min_16(in[j * 2 + 3], One), Zero);
 
                 const vec_t pa = vec_mul_16(sum0a, sum1a);
                 const vec_t pb = vec_mul_16(sum0b, sum1b);
