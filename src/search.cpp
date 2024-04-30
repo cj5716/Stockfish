@@ -1568,6 +1568,10 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
             if (quietCheckEvasions > 1)
                 break;
 
+            // If our SEE score is so good that we can beat beta + a large margin, we can return a fail high early.
+            if (pos.see_ge(move, beta - ss->staticEval + 439))
+                return beta;
+
             // Continuation history based pruning (~3 Elo)
             if (!capture && (*contHist[0])[pos.moved_piece(move)][move.to_sq()] < 0
                 && (*contHist[1])[pos.moved_piece(move)][move.to_sq()] < 0)
