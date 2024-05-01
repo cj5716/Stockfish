@@ -545,7 +545,7 @@ Value Search::Worker::search(
     Depth    extension, newDepth;
     Value    bestValue, value, ttValue, eval, maxValue, probCutBeta;
     bool     givesCheck, improving, priorCapture, opponentWorsening;
-    bool     capture, moveCountPruning, ttCapture;
+    bool     capture, moveCountPruning, ttCapture, tripleExtended;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
 
@@ -557,6 +557,7 @@ Value Search::Worker::search(
     moveCount = captureCount = quietCount = ss->moveCount = 0;
     bestValue                                             = -VALUE_INFINITE;
     maxValue                                              = VALUE_INFINITE;
+    tripleExtended                                        = false;
 
     // Check for the available remaining time
     if (is_mainthread())
@@ -1059,6 +1060,8 @@ moves_loop:  // When in check, search starts here
                     if (PvNode && !ttCapture && ss->multipleExtensions <= 5
                         && value < singularBeta - 38)
                         extension = 2;
+
+                    tripleExtended = extension >= 3;
                 }
 
                 // Multi-cut pruning
@@ -1132,6 +1135,10 @@ moves_loop:  // When in check, search starts here
 
         // Increase reduction if ttMove is a capture (~3 Elo)
         if (ttCapture)
+            r++;
+
+        // Increase reduction if our very singular TT move failed to fail high (~10000 Elo)
+        if (tripleExtended)
             r++;
 
         // Decrease reduction for PvNodes (~0 Elo on STC, ~2 Elo on LTC)
