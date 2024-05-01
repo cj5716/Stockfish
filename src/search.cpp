@@ -593,6 +593,7 @@ Value Search::Worker::search(
     bestMove             = Move::none();
     (ss + 2)->killers[0] = (ss + 2)->killers[1] = Move::none();
     (ss + 2)->cutoffCnt                         = 0;
+    (ss + 2)->earlyCutoffCnt                    = 0;
     ss->multipleExtensions                      = (ss - 1)->multipleExtensions;
     Square prevSq = ((ss - 1)->currentMove).is_ok() ? ((ss - 1)->currentMove).to_sq() : SQ_NONE;
     ss->statScore = 0;
@@ -629,6 +630,8 @@ Value Search::Worker::search(
             if (prevSq != SQ_NONE && (ss - 1)->moveCount <= 2 && !priorCapture)
                 update_continuation_histories(ss - 1, pos.piece_on(prevSq), prevSq,
                                               -stat_malus(depth + 1));
+
+            ss->earlyCutoffCnt++;
         }
 
         // Partial workaround for the graph history interaction problem
@@ -773,7 +776,10 @@ Value Search::Worker::search(
                - (ss - 1)->statScore / 286
              >= beta
         && eval >= beta && eval < VALUE_TB_WIN_IN_MAX_PLY && (!ttMove || ttCapture))
+    {
+        ss->earlyCutoffCnt++;
         return beta > VALUE_TB_LOSS_IN_MAX_PLY ? (eval + beta) / 2 : eval;
+    }
 
     // Step 9. Null move search with verification search (~35 Elo)
     if (!PvNode && (ss - 1)->currentMove != Move::null() && (ss - 1)->statScore < 18001
@@ -799,7 +805,10 @@ Value Search::Worker::search(
         if (nullValue >= beta && nullValue < VALUE_TB_WIN_IN_MAX_PLY)
         {
             if (thisThread->nmpMinPly || depth < 16)
+            {
+                ss->earlyCutoffCnt++;
                 return nullValue;
+            }
 
             assert(!thisThread->nmpMinPly);  // Recursive verification is not allowed
 
@@ -812,7 +821,10 @@ Value Search::Worker::search(
             thisThread->nmpMinPly = 0;
 
             if (v >= beta)
+            {
+                ss->earlyCutoffCnt++;
                 return nullValue;
+            }
         }
     }
 
@@ -877,6 +889,9 @@ Value Search::Worker::search(
                     // Save ProbCut data into transposition table
                     tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER, depth - 3,
                               move, unadjustedStaticEval, tt.generation());
+
+                    ss->earlyCutoffCnt++;
+
                     return std::abs(value) < VALUE_TB_WIN_IN_MAX_PLY ? value - (probCutBeta - beta)
                                                                      : value;
                 }
@@ -892,7 +907,10 @@ moves_loop:  // When in check, search starts here
     if (ss->inCheck && !PvNode && ttCapture && (tte->bound() & BOUND_LOWER)
         && tte->depth() >= depth - 4 && ttValue >= probCutBeta
         && std::abs(ttValue) < VALUE_TB_WIN_IN_MAX_PLY && std::abs(beta) < VALUE_TB_WIN_IN_MAX_PLY)
+    {
+        ss->earlyCutoffCnt++;
         return probCutBeta;
+    }
 
     const PieceToHistory* contHist[] = {(ss - 1)->continuationHistory,
                                         (ss - 2)->continuationHistory,
@@ -1072,6 +1090,7 @@ moves_loop:  // When in check, search starts here
                     if (!ttCapture)
                         update_quiet_stats(pos, ss, *this, ttMove, -stat_malus(depth));
 
+                    ss->earlyCutoffCnt++;
                     return singularBeta;
                 }
 
@@ -1140,7 +1159,7 @@ moves_loop:  // When in check, search starts here
             r--;
 
         // Increase reduction if next ply has a lot of fail high (~5 Elo)
-        if ((ss + 1)->cutoffCnt > 3)
+        if ((ss + 1)->cutoffCnt > 3 && (ss + 1)->earlyCutoffCnt > 3)
             r++;
 
         // Set reduction to 0 for first picked move (ttMove) (~2 Elo)
@@ -1489,6 +1508,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
                 tte->save(posKey, value_to_tt(bestValue, ss->ply), false, BOUND_LOWER, DEPTH_NONE,
                           Move::none(), unadjustedStaticEval, tt.generation());
 
+            ss->earlyCutoffCnt++;
             return bestValue;
         }
 
