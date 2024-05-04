@@ -865,7 +865,12 @@ Value Search::Worker::search(
                 // Perform a preliminary qsearch to verify that the move holds
                 value = -qsearch<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1);
 
-                // If the qsearch held, perform the regular search
+                // If we are at high depth and the qsearch held, perform another reduced search first
+                if (value >= probCutBeta && depth >= 9)
+                    value = -search<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1,
+                                           (depth - 4) / 2, !cutNode);
+
+                // If the reduced searches held, we can perform the regular search
                 if (value >= probCutBeta)
                     value = -search<NonPV>(pos, ss + 1, -probCutBeta, -probCutBeta + 1, depth - 4,
                                            !cutNode);
