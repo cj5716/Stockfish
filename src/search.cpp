@@ -501,8 +501,16 @@ void Search::Worker::clear() {
                 for (auto& h : to)
                     h->fill(-65);
 
-    for (size_t i = 1; i < reductions.size(); ++i)
-        reductions[i] = int((20.14 + std::log(size_t(options["Threads"])) / 2) * std::log(i));
+    for (size_t d = 1; d < reductions.size(); ++d)
+    {
+        for (size_t m = 1; m < reductions[d].size(); ++m)
+        {
+            const double redCoeff =
+              std::pow(20.14 + std::log(size_t(options["Threads"])) / 2, 2.00);
+            reductions[d][m] =
+              int(redCoeff * std::log(d) * std::log(m) + 57.1 * std::log(d) - 57.1 * std::log(m));
+        }
+    }
 
     refreshTable.clear(networks);
 }
@@ -1642,7 +1650,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
 }
 
 Depth Search::Worker::reduction(bool i, Depth d, int mn, int delta) {
-    int reductionScale = reductions[d] * reductions[mn];
+    const int reductionScale = reductions[d][mn];
     return (reductionScale + 1150 - delta * 832 / rootDelta) / 1024 + (!i && reductionScale > 1025);
 }
 
