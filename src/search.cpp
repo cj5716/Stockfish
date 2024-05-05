@@ -68,7 +68,7 @@ Value futility_margin(Depth d,
     Value oppStatScoreAddition = oppStatScore / 286;
     Value improvingDeduction   = 52 * improving * futilityMult / 32;
     Value improvementDeduction =
-      std::clamp(improvement * std::abs(improvement) / 256, -futilityMult / 2, futilityMult / 2);
+      std::clamp(improvement * std::abs(improvement) / 1024, -futilityMult / 2, futilityMult / 2);
     Value oppWorseningDeduction = (316 + 48 * improving) * oppWorsening * futilityMult / 1024;
 
     return futilityMult * d + oppStatScoreAddition - improvingDeduction - improvementDeduction
