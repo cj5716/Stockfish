@@ -1093,6 +1093,10 @@ moves_loop:  // When in check, search starts here
                 else if (ttValue <= value)
                     extension = -1;
             }
+            // At low depth, we extend the TT move if it the static eval seems to suggest that the TT move is singular (~10000 Elo)
+            else if (depth < 3 && move == ttMove && !excludedMove && (tte->bound() & BOUND_LOWER)
+                     && tte->depth() >= depth - 3 && ss->staticEval <= ttValue - 400)
+                extension = 1;
 
             // Extension for capturing the previous moved piece (~0 Elo on STC, ~1 Elo on LTC)
             else if (PvNode && move == ttMove && move.to_sq() == prevSq
