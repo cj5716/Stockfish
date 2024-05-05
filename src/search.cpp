@@ -1538,14 +1538,6 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
 
                 Value futilityValue = futilityBase + PieceValue[pos.piece_on(move.to_sq())];
 
-                // If static eval + value of piece we are going to capture is much lower
-                // than alpha we can prune this move. (~2 Elo)
-                if (futilityValue <= alpha)
-                {
-                    bestValue = std::max(bestValue, futilityValue);
-                    continue;
-                }
-
                 // If static eval is much lower than alpha and move is not winning material
                 // we can prune this move. (~2 Elo)
                 if (futilityBase <= alpha && !pos.see_ge(move, 1))
