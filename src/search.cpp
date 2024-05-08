@@ -995,7 +995,7 @@ moves_loop:  // When in check, search starts here
                   + thisThread->pawnHistory[pawn_structure_index(pos)][movedPiece][move.to_sq()];
 
                 // Continuation history based pruning (~2 Elo)
-                if (lmrDepth < 6 && history < -4081 * depth)
+                if (lmrDepth < 6 && history < -4081 * depth - 2048 * improving + 4096)
                     continue;
 
                 history += 2 * thisThread->mainHistory[us][move.from_to()];
@@ -1060,7 +1060,7 @@ moves_loop:  // When in check, search starts here
                               + (value < singularBeta - tripleMargin)
                               + (value < singularBeta - quadMargin);
 
-                    depth += ((!PvNode) && (depth < 14));
+                    depth += (!PvNode && depth < 14);
                 }
 
                 // Multi-cut pruning
