@@ -829,7 +829,7 @@ Value Search::Worker::search(
 
     // For cutNodes, we decrease depth depending on the TT entry status and our current depth.
     if (cutNode && depth >= 8
-        && (!ttMove || (tte->bound() == BOUND_UPPER && (!ss->ttPv || tte->depth() + 7 < depth))))
+        && (!ttMove || (tte->bound() == BOUND_UPPER && (!ss->ttPv || tte->depth() + 3 < depth))))
         depth -= 1 + !ttMove;
 
     // Step 11. ProbCut (~10 Elo)
