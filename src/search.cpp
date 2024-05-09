@@ -363,7 +363,8 @@ void Search::Worker::iterative_deepening() {
                 }
                 else if (bestValue >= beta)
                 {
-                    beta = std::min(bestValue + delta, VALUE_INFINITE);
+                    beta  = std::min(bestValue + delta, VALUE_INFINITE);
+                    alpha = std::max(std::max(bestValue - delta * 2, -VALUE_INFINITE), alpha);
                     ++failedHighCnt;
                 }
                 else
