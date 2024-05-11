@@ -770,23 +770,26 @@ Value Search::Worker::search(
         if (value < alpha)
             return value;
 
-        // The qsearch failed high, so if we have missing TT info we can make use of
-        // the search results from the qsearch
-        // Note that the last move searched will always be the move that caused the fail high
-        else if (!ss->ttHit)
+        else if (!rootNode)
         {
-            ss->ttHit = true;
-            ttValue   = value;
-            ttMove    = ss->currentMove;
-            ttBound   = BOUND_LOWER;
-            ttDepth   = DEPTH_QS_CHECKS;
+            // The qsearch failed high, so if we have missing TT info we can make use of
+            // the search results from the qsearch
+            // Note that the last move searched will always be the move that caused the fail high
+            if (!ss->ttHit)
+            {
+                ss->ttHit = true;
+                ttValue   = value;
+                ttMove    = ss->currentMove;
+                ttBound   = BOUND_LOWER;
+                ttDepth   = DEPTH_QS_CHECKS;
 
-            // ttValue can be used as a better position evaluation
-            if (ttValue != VALUE_NONE && ttValue > eval)
-                eval = ttValue;
+                // ttValue can be used as a better position evaluation
+                if (ttValue != VALUE_NONE && ttValue > eval)
+                    eval = ttValue;
+            }
+            else if (ss->currentMove.is_ok())
+                ttMove = ss->currentMove;
         }
-        else if (!ttMove)
-            ttMove = ss->currentMove;
     }
 
     // Step 8. Futility pruning: child node (~40 Elo)
