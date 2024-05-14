@@ -1029,17 +1029,32 @@ bool Position::see_ge(Move m, int threshold) const {
 
     assert(m.is_ok());
 
-    // Only deal with normal moves, assume others pass a simple SEE
-    if (m.type_of() != NORMAL)
-        return VALUE_ZERO >= threshold;
+    // We can't win any material from castling, nor can we lose any
+    if (m.type_of() == CASTLING)
+        return threshold <= VALUE_ZERO;
 
     Square from = m.from_sq(), to = m.to_sq();
+    Piece  target = m.type_of() == EN_PASSANT ? make_piece(side_to_move(), PAWN) : piece_on(to);
 
-    int swap = PieceValue[piece_on(to)] - threshold;
+    int swap = PieceValue[target] - threshold;
+
+    // If we promote, we get the promoting piece and lose the pawn
+    if (m.type_of() == PROMOTION)
+        swap += PieceValue[make_piece(side_to_move(), m.promotion_type())] - PieceValue[PAWN];
+
+    // If we can't beat the threshold despite capturing the piece,
+    // it is impossible to beat the threshold
     if (swap < 0)
         return false;
 
-    swap = PieceValue[piece_on(from)] - swap;
+    // If we get captured, we lose the moved piece,
+    // or the promoted piece in the case of promotions
+    swap = PieceValue[m.type_of() == PROMOTION ? make_piece(side_to_move(), m.promotion_type())
+                                               : piece_on(from)]
+         - swap;
+
+    // If we still beat the threshold after losing the piece,
+    // we are guaranteed to beat the threshold
     if (swap <= 0)
         return true;
 
@@ -1049,6 +1064,9 @@ bool Position::see_ge(Move m, int threshold) const {
     Bitboard attackers = attackers_to(to, occupied);
     Bitboard stmAttackers, bb;
     int      res = 1;
+
+    if (m.type_of() == EN_PASSANT)
+        occupied ^= st->epSquare;
 
     while (true)
     {
