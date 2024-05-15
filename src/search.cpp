@@ -1523,17 +1523,16 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
         if (bestValue > VALUE_TB_LOSS_IN_MAX_PLY && pos.non_pawn_material(us))
         {
             // Futility pruning and moveCount pruning (~10 Elo)
-            if (!givesCheck && move.to_sq() != prevSq && futilityBase > VALUE_TB_LOSS_IN_MAX_PLY
-                && move.type_of() != PROMOTION)
+            if (!givesCheck && move.to_sq() != prevSq && futilityBase > VALUE_TB_LOSS_IN_MAX_PLY)
             {
-                if (moveCount > 2)
+                if (move.type_of() != PROMOTION && moveCount > 2)
                     continue;
 
                 Value futilityValue = futilityBase + PieceValue[pos.piece_on(move.to_sq())];
 
                 // If static eval + value of piece we are going to capture is much lower
                 // than alpha we can prune this move. (~2 Elo)
-                if (futilityValue <= alpha)
+                if (move.type_of() != PROMOTION && futilityValue <= alpha)
                 {
                     bestValue = std::max(bestValue, futilityValue);
                     continue;
