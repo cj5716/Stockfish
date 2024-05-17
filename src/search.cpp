@@ -1050,16 +1050,18 @@ moves_loop:  // When in check, search starts here
 
                 if (value < singularBeta)
                 {
-                    int doubleMargin = 285 * PvNode - 228 * !ttCapture;
+                    int doubleMargin = (57 * PvNode - 46 * !ttCapture) * depth / 4;
                     int tripleMargin =
-                      121 + 238 * PvNode - 259 * !ttCapture + 117 * (ss->ttPv || !ttCapture);
-                    int quadMargin = 471 + 343 * PvNode - 281 * !ttCapture + 217 * ss->ttPv;
+                      (24 + 48 * PvNode - 52 * !ttCapture + 23 * (ss->ttPv || !ttCapture)) * depth
+                      / 4;
+                    int quadMargin =
+                      (94 + 69 * PvNode - 56 * !ttCapture + 43 * ss->ttPv) * depth / 4;
 
                     extension = 1 + (value < singularBeta - doubleMargin)
                               + (value < singularBeta - tripleMargin)
                               + (value < singularBeta - quadMargin);
 
-                    depth += ((!PvNode) && (depth < 14));
+                    depth += !PvNode && depth < 14;
                 }
 
                 // Multi-cut pruning
