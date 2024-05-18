@@ -855,6 +855,8 @@ Value Search::Worker::search(
     if (cutNode && depth >= 8 && (!ttData.move || ttData.bound == BOUND_UPPER))
         depth -= 1 + !ttData.move;
 
+moves_loop:  // When in check, search starts here
+
     // Step 11. ProbCut (~10 Elo)
     // If we have a good enough capture (or queen promotion) and a reduced search returns a value
     // much above beta, we can (almost) safely prune the previous move.
@@ -870,10 +872,12 @@ Value Search::Worker::search(
     {
         assert(probCutBeta < VALUE_INFINITE && probCutBeta > beta);
 
-        MovePicker mp(pos, ttData.move, probCutBeta - ss->staticEval, &thisThread->captureHistory);
         Move       probcutCapturesSearched[32];
         int        probcutCaptureCount = 0;
         Piece      captured;
+        Value probCutThreshold = ss->inCheck ? 1 : probCutBeta - ss->staticEval;
+
+        MovePicker mp(pos, ttData.move, probCutThreshold, &thisThread->captureHistory);
 
         while ((move = mp.next_move()) != Move::none())
             if (move != excludedMove && pos.legal(move))
@@ -933,15 +937,6 @@ Value Search::Worker::search(
 
         Eval::NNUE::hint_common_parent_position(pos, networks[numaAccessToken], refreshTable);
     }
-
-moves_loop:  // When in check, search starts here
-
-    // Step 12. A small Probcut idea, when we are in check (~4 Elo)
-    probCutBeta = beta + 388;
-    if (ss->inCheck && (ttData.bound & BOUND_LOWER) && ttData.depth >= depth - 4
-        && ttData.value >= probCutBeta && std::abs(ttData.value) < VALUE_TB_WIN_IN_MAX_PLY
-        && std::abs(beta) < VALUE_TB_WIN_IN_MAX_PLY)
-        return probCutBeta;
 
     const PieceToHistory* contHist[] = {(ss - 1)->continuationHistory,
                                         (ss - 2)->continuationHistory,

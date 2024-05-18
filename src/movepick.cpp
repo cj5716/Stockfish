@@ -135,7 +135,6 @@ MovePicker::MovePicker(const Position& p, Move ttm, int th, const CapturePieceTo
     captureHistory(cph),
     ttMove(ttm),
     threshold(th) {
-    assert(!pos.checkers());
 
     stage = PROBCUT_TT
           + !(ttm && pos.capture_stage(ttm) && pos.pseudo_legal(ttm) && pos.see_ge(ttm, threshold));
@@ -249,7 +248,6 @@ top:
         return ttMove;
 
     case CAPTURE_INIT :
-    case PROBCUT_INIT :
     case QCAPTURE_INIT :
         cur = endBadCaptures = moves;
         endMoves             = generate<CAPTURES>(pos, cur);
@@ -366,6 +364,23 @@ top:
 
     case EVASION_QUIET :
         return select([]() { return true; });
+
+    case PROBCUT_INIT :
+        cur = endBadCaptures = moves;
+
+        if (pos.checkers())
+        {
+            endMoves = generate<EVASIONS_CAPT>(pos, cur);
+            score<EVASIONS_CAPT>();
+        }
+        else
+        {
+            endMoves = generate<CAPTURES>(pos, cur);
+            score<CAPTURES>();
+        }
+        partial_insertion_sort(cur, endMoves, std::numeric_limits<int>::min());
+        ++stage;
+        goto top;
 
     case PROBCUT :
         return select([&]() { return pos.see_ge(*cur, threshold); });
