@@ -70,9 +70,12 @@ class SqrClippedReLU {
         for (IndexType i = 0; i < NumChunks; ++i)
         {
             __m128i words0 =
-              _mm_packs_epi32(_mm_load_si128(&in[i * 4 + 0]), _mm_load_si128(&in[i * 4 + 1]));
+              _mm_packus_epi32(_mm_load_si128(&in[i * 4 + 0]), _mm_load_si128(&in[i * 4 + 1]));
             __m128i words1 =
-              _mm_packs_epi32(_mm_load_si128(&in[i * 4 + 2]), _mm_load_si128(&in[i * 4 + 3]));
+              _mm_packus_epi32(_mm_load_si128(&in[i * 4 + 2]), _mm_load_si128(&in[i * 4 + 3]));
+
+            words0 = _mm_min_epi16(words0, _mm_set1_epi16(127));
+            words1 = _mm_min_epi16(words1, _mm_set1_epi16(127));
 
             // We shift by WeightScaleBits * 2 = 12 and divide by 128
             // which is an additional shift-right of 7, meaning 19 in total.
@@ -90,10 +93,11 @@ class SqrClippedReLU {
 
         for (IndexType i = Start; i < InputDimensions; ++i)
         {
-            output[i] = static_cast<OutputType>(
+            InputType clippedInput = std::clamp(input[i], 0, 127);
+            output[i]              = static_cast<OutputType>(
               // Really should be /127 but we need to make it fast so we right-shift
               // by an extra 7 bits instead. Needs to be accounted for in the trainer.
-              std::min(127ll, ((long long) (input[i]) * input[i]) >> (2 * WeightScaleBits + 7)));
+              std::int64_t(clippedInput) * clippedInput >> (2 * WeightScaleBits + 7));
         }
     }
 };
