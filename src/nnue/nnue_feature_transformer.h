@@ -354,25 +354,28 @@ class FeatureTransformer {
 
             for (IndexType j = 0; j < NumOutputChunks; ++j)
             {
-                    // What we want to do is multiply inputs in a pairwise manner (after clipping), and then shift right by 9.
-                    // Instead, we shift left by 7, and use mulhi, stripping the bottom 16 bits, effectively shifting right by 16,
-                    // resulting in a net shift of 9 bits. We use mulhi because it maintains the sign of the multiplication (unlike mullo),
-                    // allowing us to make use of packus to clip 2 of the inputs, resulting in a save of 2 "vec_max_16" calls.
-                    // A special case is when we use NEON, where we shift left by 6 instead, because the instruction "vqdmulhq_s16"
-                    // also doubles the return value after the multiplication, adding an extra shift to the left by 1, so we
-                    // compensate by shifting less before the multiplication.
-
     #if defined(USE_SSE2)
                 constexpr int shift = 7;
     #else
                 constexpr int shift = 6;
     #endif
-                const vec_t sum0a =
-                  vec_slli_16(vec_max_16(vec_min_16(in0[j * 2 + 0], One), Zero), shift);
-                const vec_t sum0b =
-                  vec_slli_16(vec_max_16(vec_min_16(in0[j * 2 + 1], One), Zero), shift);
-                const vec_t sum1a = vec_min_16(in1[j * 2 + 0], One);
-                const vec_t sum1b = vec_min_16(in1[j * 2 + 1], One);
+
+                const vec_t clip0a = vec_min_16(in0[j * 2 + 0], One);
+                const vec_t clip0b = vec_min_16(in0[j * 2 + 1], One);
+                const vec_t clip1a = vec_min_16(in1[j * 2 + 0], One);
+                const vec_t clip1b = vec_min_16(in1[j * 2 + 1], One);
+
+                // What we want to do is multiply inputs in a pairwise manner (after clipping), and then shift right by 9.
+                // Instead, we shift left by 7, and use mulhi, stripping the bottom 16 bits, effectively shifting right by 16,
+                // resulting in a net shift of 9 bits. We use mulhi because it maintains the sign of the multiplication (unlike mullo),
+                // allowing us to make use of packus to clip 2 of the inputs, resulting in a save of 2 "vec_max_16" calls.
+                // A special case is when we use NEON, where we shift left by 6 instead, because the instruction "vqdmulhq_s16"
+                // also doubles the return value after the multiplication, adding an extra shift to the left by 1, so we
+                // compensate by shifting less before the multiplication.
+                const vec_t sum0a = vec_slli_16(vec_max_16(clip0a, Zero), shift);
+                const vec_t sum0b = vec_slli_16(vec_max_16(clip0b, Zero), shift);
+                const vec_t sum1a = clip1a;
+                const vec_t sum1b = clip1b;
 
                 const vec_t pa = vec_mulhi_16(sum0a, sum1a);
                 const vec_t pb = vec_mulhi_16(sum0b, sum1b);
