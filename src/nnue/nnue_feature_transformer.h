@@ -62,7 +62,7 @@ using psqt_vec_t = __m256i;
     #define vec_min_16(a, b) _mm512_min_epi16(a, b)
     #define vec_slli_16(a, b) _mm512_slli_epi16(a, b)
     // Inverse permuted at load time
-    #define vec_packus_16(a, b) _mm512_packus_epi16(a, b)
+    #define vec_packus_store_16(dst, a, b) vec_store(dst, _mm512_packus_epi16(a, b))
     #define vec_load_psqt(a) _mm256_load_si256(a)
     #define vec_store_psqt(a, b) _mm256_store_si256(a, b)
     #define vec_add_psqt_32(a, b) _mm256_add_epi32(a, b)
@@ -85,7 +85,7 @@ using psqt_vec_t = __m256i;
     #define vec_min_16(a, b) _mm256_min_epi16(a, b)
     #define vec_slli_16(a, b) _mm256_slli_epi16(a, b)
     // Inverse permuted at load time
-    #define vec_packus_16(a, b) _mm256_packus_epi16(a, b)
+    #define vec_packus_store_16(dst, a, b) vec_store(dst, _mm256_packus_epi16(a, b))
     #define vec_load_psqt(a) _mm256_load_si256(a)
     #define vec_store_psqt(a, b) _mm256_store_si256(a, b)
     #define vec_add_psqt_32(a, b) _mm256_add_epi32(a, b)
@@ -107,7 +107,7 @@ using psqt_vec_t = __m128i;
     #define vec_max_16(a, b) _mm_max_epi16(a, b)
     #define vec_min_16(a, b) _mm_min_epi16(a, b)
     #define vec_slli_16(a, b) _mm_slli_epi16(a, b)
-    #define vec_packus_16(a, b) _mm_packus_epi16(a, b)
+    #define vec_packus_store_16(dst, a, b) vec_store(dst, _mm_packus_epi16(a, b))
     #define vec_load_psqt(a) (*(a))
     #define vec_store_psqt(a, b) *(a) = (b)
     #define vec_add_psqt_32(a, b) _mm_add_epi32(a, b)
@@ -130,7 +130,11 @@ using psqt_vec_t = int32x4_t;
     #define vec_max_16(a, b) vmaxq_s16(a, b)
     #define vec_min_16(a, b) vminq_s16(a, b)
     #define vec_slli_16(a, b) vshlq_s16(a, vec_set_16(b))
-    #define vec_packus_16(a, b) reinterpret_cast<vec_t>(vcombine_u8(vqmovun_s16(a), vqmovun_s16(b)))
+inline void vec_packus_store_16(vec_t* dst, vec_t a, vec_t b) {
+    uint8x8_t* dst_u8 = reinterpret_cast<uint8x8_t*>(dst);
+    vec_store(dst_u8, vqmovun_s16(a));
+    vec_store(dst_u8 + 1, vqmovun_s16(b));
+}
     #define vec_load_psqt(a) (*(a))
     #define vec_store_psqt(a, b) *(a) = (b)
     #define vec_add_psqt_32(a, b) vaddq_s32(a, b)
@@ -377,7 +381,7 @@ class FeatureTransformer {
                 const vec_t pa = vec_mulhi_16(sum0a, sum1a);
                 const vec_t pb = vec_mulhi_16(sum0b, sum1b);
 
-                out[j] = vec_packus_16(pa, pb);
+                vec_packus_store_16(&out[j], pa, pb);
             }
 
 #else
