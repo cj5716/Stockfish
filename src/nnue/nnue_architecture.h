@@ -129,9 +129,16 @@ struct NetworkArchitecture {
           (buffer.fc_0_out[FC_0_OUTPUTS]) * (600 * OutputScale) / (127 * (1 << WeightScaleBits));
         std::int32_t         outputValue = buffer.fc_2_out[0] + fwdOut;
         std::uint16_t        featureHash = 0;
+        std::uint64_t        rng         = 0x12345678ULL;
         const std::uint16_t* L3Features  = reinterpret_cast<const std::uint16_t*>(buffer.fc_1_out);
         for (IndexType i = 0; i < FC_1_OUTPUTS * 2; ++i)
-            featureHash ^= L3Features[i] * 0x1234 >> 16;
+        {
+            featureHash ^= L3Features[i] * std::uint32_t(rng) >> 16;
+            rng ^= L3Features[i];
+            rng ^= rng << 28;
+            rng ^= rng << 50;
+            rng ^= rng << 2;
+        }
 
         return {outputValue, featureHash};
     }
