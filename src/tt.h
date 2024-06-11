@@ -28,28 +28,38 @@
 
 namespace Stockfish {
 
-// TTEntry struct is the 10 bytes transposition table entry, defined as below:
+// TTEntry struct is the 12 bytes transposition table entry, defined as below:
 //
-// key        16 bit
-// depth       8 bit
-// generation  5 bit
-// pv node     1 bit
-// bound type  2 bit
-// move       16 bit
-// value      16 bit
-// eval value 16 bit
+// key          16 bit
+// depth         8 bit
+// generation    5 bit
+// pv node       1 bit
+// bound type    2 bit
+// move         16 bit
+// value        16 bit
+// eval value   16 bit
+// feature hash 16 bit
 //
 // These fields are in the same order as accessed by TT::probe(), since memory is fastest sequentially.
 // Equally, the store order in save() matches this order.
 struct TTEntry {
 
-    Move  move() const { return Move(move16); }
-    Value value() const { return Value(value16); }
-    Value eval() const { return Value(eval16); }
-    Depth depth() const { return Depth(depth8 + DEPTH_ENTRY_OFFSET); }
-    bool  is_pv() const { return bool(genBound8 & 0x4); }
-    Bound bound() const { return Bound(genBound8 & 0x3); }
-    void  save(Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev, uint8_t generation8);
+    Move     move() const { return Move(move16); }
+    Value    value() const { return Value(value16); }
+    Value    eval() const { return Value(eval16); }
+    Depth    depth() const { return Depth(depth8 + DEPTH_ENTRY_OFFSET); }
+    bool     is_pv() const { return bool(genBound8 & 0x4); }
+    Bound    bound() const { return Bound(genBound8 & 0x3); }
+    uint16_t feature_hash() const { return featureHash16; }
+    void     save(Key      k,
+                  Value    v,
+                  bool     pv,
+                  Bound    b,
+                  Depth    d,
+                  Move     m,
+                  Value    ev,
+                  uint16_t fh,
+                  uint8_t  generation8);
     // The returned age is a multiple of TranspositionTable::GENERATION_DELTA
     uint8_t relative_age(const uint8_t generation8) const;
 
@@ -62,6 +72,7 @@ struct TTEntry {
     Move     move16;
     int16_t  value16;
     int16_t  eval16;
+    uint16_t featureHash16;
 };
 
 class ThreadPool;
@@ -73,14 +84,14 @@ class ThreadPool;
 // prefetched when possible.
 class TranspositionTable {
 
-    static constexpr int ClusterSize = 3;
+    static constexpr int ClusterSize = 5;
 
     struct Cluster {
         TTEntry entry[ClusterSize];
-        char    padding[2];  // Pad to 32 bytes
+        char    padding[4];  // Pad to 64 bytes
     };
 
-    static_assert(sizeof(Cluster) == 32, "Unexpected Cluster size");
+    static_assert(sizeof(Cluster) == 64, "Unexpected Cluster size");
 
     // Constants used to refresh the hash table periodically
 

@@ -556,7 +556,7 @@ Value Search::Worker::search(
     bool     capture, moveCountPruning, ttCapture;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
-    uint16_t featureHash;
+    uint16_t ttFeatureHash, featureHash;
     Bound    singularBound;
 
     // Step 1. Initialize node
@@ -618,11 +618,12 @@ Value Search::Worker::search(
     excludedMove = ss->excludedMove;
     posKey       = pos.key();
     tte          = tt.probe(posKey, ss->ttHit);
-    ttValue   = ss->ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
-    ttMove    = rootNode  ? thisThread->rootMoves[thisThread->pvIdx].pv[0]
-              : ss->ttHit ? tte->move()
-                          : Move::none();
-    ttCapture = ttMove && pos.capture_stage(ttMove);
+    ttValue = ss->ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
+    ttMove  = rootNode  ? thisThread->rootMoves[thisThread->pvIdx].pv[0]
+            : ss->ttHit ? tte->move()
+                        : Move::none();
+    ttFeatureHash = ss->ttHit ? tte->feature_hash() : 0;
+    ttCapture     = ttMove && pos.capture_stage(ttMove);
 
     // At this point, if excluded, skip straight to step 6, static eval. However,
     // to save indentation, we list the condition in all code between here and there.
@@ -691,7 +692,7 @@ Value Search::Worker::search(
                 {
                     tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, b,
                               std::min(MAX_PLY - 1, depth + 6), Move::none(), VALUE_NONE,
-                              tt.generation());
+                              featureHash, tt.generation());
 
                     return value;
                 }
@@ -726,6 +727,7 @@ Value Search::Worker::search(
     {
         // Never assume anything about values stored in TT
         unadjustedStaticEval = tte->eval();
+        featureHash          = ttFeatureHash;
         if (unadjustedStaticEval == VALUE_NONE)
             std::tie(unadjustedStaticEval, featureHash) =
               evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us]);
@@ -746,7 +748,7 @@ Value Search::Worker::search(
 
         // Static evaluation is saved as it was before adjustment by correction history
         tte->save(posKey, VALUE_NONE, ss->ttPv, BOUND_NONE, DEPTH_UNSEARCHED, Move::none(),
-                  unadjustedStaticEval, tt.generation());
+                  unadjustedStaticEval, featureHash, tt.generation());
     }
 
     // Use static evaluation difference to improve quiet move ordering (~9 Elo)
@@ -892,7 +894,7 @@ Value Search::Worker::search(
                 {
                     // Save ProbCut data into transposition table
                     tte->save(posKey, value_to_tt(value, ss->ply), ss->ttPv, BOUND_LOWER, depth - 3,
-                              move, unadjustedStaticEval, tt.generation());
+                              move, unadjustedStaticEval, featureHash, tt.generation());
                     return std::abs(value) < VALUE_TB_WIN_IN_MAX_PLY ? value - (probCutBeta - beta)
                                                                      : value;
                 }
@@ -1376,7 +1378,7 @@ moves_loop:  // When in check, search starts here
                   bestValue >= beta    ? BOUND_LOWER
                   : PvNode && bestMove ? BOUND_EXACT
                                        : BOUND_UPPER,
-                  depth, bestMove, unadjustedStaticEval, tt.generation());
+                  depth, bestMove, unadjustedStaticEval, featureHash, tt.generation());
 
     // Adjust correction history
     if (!ss->inCheck && (!bestMove || !pos.capture(bestMove))
@@ -1430,7 +1432,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     Value    bestValue, value, ttValue, futilityBase, unadjustedStaticEval;
     bool     pvHit, givesCheck, capture;
     int      moveCount;
-    uint16_t featureHash;
+    uint16_t ttFeatureHash, featureHash;
     Color    us = pos.side_to_move();
 
     // Step 1. Initialize node
@@ -1476,7 +1478,8 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     tte     = tt.probe(posKey, ss->ttHit);
     ttValue = ss->ttHit ? value_from_tt(tte->value(), ss->ply, pos.rule50_count()) : VALUE_NONE;
     ttMove  = ss->ttHit ? tte->move() : Move::none();
-    pvHit   = ss->ttHit && tte->is_pv();
+    ttFeatureHash = ss->ttHit ? tte->feature_hash() : 0;
+    pvHit         = ss->ttHit && tte->is_pv();
 
     // At non-PV nodes we check for an early TT cutoff
     if (!PvNode && tte->depth() >= ttDepth
@@ -1496,6 +1499,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
         {
             // Never assume anything about values stored in TT
             unadjustedStaticEval = tte->eval();
+            featureHash          = ttFeatureHash;
             if (unadjustedStaticEval == VALUE_NONE)
                 std::tie(unadjustedStaticEval, featureHash) =
                   evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us]);
@@ -1523,7 +1527,8 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
                 bestValue = (3 * bestValue + beta) / 4;
             if (!ss->ttHit)
                 tte->save(posKey, value_to_tt(bestValue, ss->ply), false, BOUND_LOWER,
-                          DEPTH_UNSEARCHED, Move::none(), unadjustedStaticEval, tt.generation());
+                          DEPTH_UNSEARCHED, Move::none(), unadjustedStaticEval, featureHash,
+                          tt.generation());
 
             return bestValue;
         }
@@ -1664,7 +1669,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     // Static evaluation is saved as it was before adjustment by correction history
     tte->save(posKey, value_to_tt(bestValue, ss->ply), pvHit,
               bestValue >= beta ? BOUND_LOWER : BOUND_UPPER, ttDepth, bestMove,
-              unadjustedStaticEval, tt.generation());
+              unadjustedStaticEval, featureHash, tt.generation());
 
     assert(bestValue > -VALUE_INFINITE && bestValue < VALUE_INFINITE);
 
