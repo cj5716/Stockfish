@@ -1461,7 +1461,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
             return unadjustedStaticEval;
         }
         else
-            return value_draw(thisThread->nodes);
+            return VALUE_DRAW;
     }
 
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
