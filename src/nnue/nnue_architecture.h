@@ -62,6 +62,8 @@ struct NetworkArchitecture {
     Layers::ClippedReLU<FC_1_OUTPUTS>                                                  ac_1;
     Layers::AffineTransform<FC_1_OUTPUTS, 1>                                           fc_2;
 
+    uint16_t featureHashes[FC_1_OUTPUTS];
+
     // Hash value embedded in the evaluation file
     static constexpr std::uint32_t get_hash_value() {
         // input slice hash
@@ -89,6 +91,20 @@ struct NetworkArchitecture {
         return fc_0.write_parameters(stream) && ac_0.write_parameters(stream)
             && fc_1.write_parameters(stream) && ac_1.write_parameters(stream)
             && fc_2.write_parameters(stream);
+    }
+
+    // Init feature hashes
+    void init_feature_hashes() const {
+        uint64_t  seed = 0x12345678ULL;
+        uint16_t* fhs  = const_cast<uint16_t*>(featureHashes);
+        for (IndexType i = 0; i < FC_1_OUTPUTS; ++i)
+        {
+            seed ^= seed >> 12;
+            seed ^= seed << 25;
+            seed ^= seed >> 27;
+            seed *= 2685821657736338717ULL;
+            fhs[i] = uint16_t(seed);
+        }
     }
 
     std::tuple<std::int32_t, std::uint16_t>
@@ -127,17 +143,12 @@ struct NetworkArchitecture {
         // quantized form, but we want 1.0 to be equal to 600*OutputScale
         std::int32_t fwdOut =
           (buffer.fc_0_out[FC_0_OUTPUTS]) * (600 * OutputScale) / (127 * (1 << WeightScaleBits));
-        std::int32_t         outputValue = buffer.fc_2_out[0] + fwdOut;
-        std::uint16_t        featureHash = 0;
-        std::uint64_t        rng         = 0x12345678ULL;
-        const std::uint16_t* L3Features  = reinterpret_cast<const std::uint16_t*>(buffer.fc_1_out);
-        for (IndexType i = 0; i < FC_1_OUTPUTS * 2; ++i)
+        std::int32_t  outputValue = buffer.fc_2_out[0] + fwdOut;
+        std::uint16_t featureHash = 0;
+        for (IndexType i = 0; i < FC_1_OUTPUTS; ++i)
         {
-            featureHash ^= L3Features[i] * std::uint32_t(rng) >> 16;
-            rng ^= L3Features[i];
-            rng ^= rng << 28;
-            rng ^= rng << 50;
-            rng ^= rng << 2;
+            // Indicate if features were > 0 pre-clipping
+            featureHash ^= bool(buffer.ac_1_out[i]) * featureHashes[i];
         }
 
         return {outputValue, featureHash};
