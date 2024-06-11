@@ -131,7 +131,7 @@ struct NetworkArchitecture {
         std::uint16_t        featureHash = 0;
         const std::uint16_t* L3Features  = reinterpret_cast<const std::uint16_t*>(buffer.fc_1_out);
         for (IndexType i = 0; i < FC_1_OUTPUTS * 2; ++i)
-            featureHash ^= L3Features[i];
+            featureHash ^= L3Features[i] * 0x1234 >> 16;
 
         return {outputValue, featureHash};
     }
