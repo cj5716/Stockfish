@@ -52,10 +52,10 @@ bool Eval::use_smallnet(const Position& pos) {
 
 // Evaluate is the evaluator for the outer world. It returns a static evaluation
 // of the position from the point of view of the side to move.
-Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
-                     const Position&                pos,
-                     Eval::NNUE::AccumulatorCaches& caches,
-                     int                            optimism) {
+std::tuple<Value, uint16_t> Eval::evaluate(const Eval::NNUE::Networks&    networks,
+                                           const Position&                pos,
+                                           Eval::NNUE::AccumulatorCaches& caches,
+                                           int                            optimism) {
 
     assert(!pos.checkers());
 
@@ -63,8 +63,8 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     bool smallNet   = use_smallnet(pos);
     int  v;
 
-    auto [psqt, positional] = smallNet ? networks.small.evaluate(pos, &caches.small)
-                                       : networks.big.evaluate(pos, &caches.big);
+    auto [psqt, positional, featureHash] = smallNet ? networks.small.evaluate(pos, &caches.small)
+                                                    : networks.big.evaluate(pos, &caches.big);
 
     Value nnue           = psqt + positional;
     int   nnueComplexity = std::abs(psqt - positional);
@@ -72,10 +72,10 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     // Re-evaluate the position when higher eval accuracy is worth the time spent
     if (smallNet && (nnue * simpleEval < 0 || std::abs(nnue) < 227))
     {
-        std::tie(psqt, positional) = networks.big.evaluate(pos, &caches.big);
-        nnue                       = psqt + positional;
-        nnueComplexity             = std::abs(psqt - positional);
-        smallNet                   = false;
+        std::tie(psqt, positional, featureHash) = networks.big.evaluate(pos, &caches.big);
+        nnue                                    = psqt + positional;
+        nnueComplexity                          = std::abs(psqt - positional);
+        smallNet                                = false;
     }
 
     // Blend optimism and eval with nnue complexity
@@ -91,7 +91,7 @@ Value Eval::evaluate(const Eval::NNUE::Networks&    networks,
     // Guarantee evaluation does not hit the tablebase range
     v = std::clamp(v, VALUE_TB_LOSS_IN_MAX_PLY + 1, VALUE_TB_WIN_IN_MAX_PLY - 1);
 
-    return v;
+    return {v, featureHash};
 }
 
 // Like evaluate(), but instead of returning a value, it returns
@@ -111,13 +111,13 @@ std::string Eval::trace(Position& pos, const Eval::NNUE::Networks& networks) {
 
     ss << std::showpoint << std::showpos << std::fixed << std::setprecision(2) << std::setw(15);
 
-    auto [psqt, positional] = networks.big.evaluate(pos, &caches->big);
-    Value v                 = psqt + positional;
-    v                       = pos.side_to_move() == WHITE ? v : -v;
+    auto [psqt, positional, featureHash] = networks.big.evaluate(pos, &caches->big);
+    Value v                              = psqt + positional;
+    v                                    = pos.side_to_move() == WHITE ? v : -v;
     ss << "NNUE evaluation        " << 0.01 * UCIEngine::to_cp(v, pos) << " (white side)\n";
 
-    v = evaluate(networks, pos, *caches, VALUE_ZERO);
-    v = pos.side_to_move() == WHITE ? v : -v;
+    std::tie(v, featureHash) = evaluate(networks, pos, *caches, VALUE_ZERO);
+    v                        = pos.side_to_move() == WHITE ? v : -v;
     ss << "Final evaluation       " << 0.01 * UCIEngine::to_cp(v, pos) << " (white side)";
     ss << " [with scaled NNUE, ...]";
     ss << "\n";

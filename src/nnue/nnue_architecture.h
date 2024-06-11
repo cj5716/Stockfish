@@ -91,7 +91,8 @@ struct NetworkArchitecture {
             && fc_2.write_parameters(stream);
     }
 
-    std::int32_t propagate(const TransformedFeatureType* transformedFeatures) {
+    std::tuple<std::int32_t, std::uint16_t>
+    propagate(const TransformedFeatureType* transformedFeatures) {
         struct alignas(CacheLineSize) Buffer {
             alignas(CacheLineSize) typename decltype(fc_0)::OutputBuffer fc_0_out;
             alignas(CacheLineSize) typename decltype(ac_sqr_0)::OutputType
@@ -126,9 +127,13 @@ struct NetworkArchitecture {
         // quantized form, but we want 1.0 to be equal to 600*OutputScale
         std::int32_t fwdOut =
           (buffer.fc_0_out[FC_0_OUTPUTS]) * (600 * OutputScale) / (127 * (1 << WeightScaleBits));
-        std::int32_t outputValue = buffer.fc_2_out[0] + fwdOut;
+        std::int32_t         outputValue = buffer.fc_2_out[0] + fwdOut;
+        std::uint16_t        featureHash = 0;
+        const std::uint16_t* L3Features  = reinterpret_cast<const std::uint16_t*>(buffer.fc_1_out);
+        for (IndexType i = 0; i < FC_1_OUTPUTS * 2; ++i)
+            featureHash ^= L3Features[i];
 
-        return outputValue;
+        return {outputValue, featureHash};
     }
 };
 

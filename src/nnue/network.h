@@ -41,7 +41,7 @@ enum class EmbeddedNNUEType {
     SMALL,
 };
 
-using NetworkOutput = std::tuple<Value, Value>;
+using NetworkOutput = std::tuple<Value, Value, uint16_t>;
 
 template<typename Arch, typename Transformer>
 class Network {

@@ -550,11 +550,13 @@ Value Search::Worker::search(
     Key      posKey;
     Move     ttMove, move, excludedMove, bestMove;
     Depth    extension, newDepth;
-    Value    bestValue, value, ttValue, eval, maxValue, probCutBeta, singularValue;
+    Value    bestValue, value, ttValue, eval, maxValue, probCutBeta, singularValue,
+      unadjustedStaticEval;
     bool     givesCheck, improving, priorCapture, opponentWorsening;
     bool     capture, moveCountPruning, ttCapture;
     Piece    movedPiece;
     int      moveCount, captureCount, quietCount;
+    uint16_t featureHash;
     Bound    singularBound;
 
     // Step 1. Initialize node
@@ -563,8 +565,10 @@ Value Search::Worker::search(
     priorCapture       = pos.captured_piece();
     Color us           = pos.side_to_move();
     moveCount = captureCount = quietCount = ss->moveCount = 0;
+    featureHash                                           = 0;
     bestValue                                             = -VALUE_INFINITE;
     maxValue                                              = VALUE_INFINITE;
+    unadjustedStaticEval                                  = VALUE_NONE;
 
     // Check for the available remaining time
     if (is_mainthread())
@@ -579,10 +583,16 @@ Value Search::Worker::search(
         // Step 2. Check for aborted search and immediate draw
         if (threads.stop.load(std::memory_order_relaxed) || pos.is_draw(ss->ply)
             || ss->ply >= MAX_PLY)
-            return (ss->ply >= MAX_PLY && !ss->inCheck)
-                   ? evaluate(networks[numaAccessToken], pos, refreshTable,
-                              thisThread->optimism[us])
-                   : value_draw(thisThread->nodes);
+        {
+            if (ss->ply >= MAX_PLY && !ss->inCheck)
+            {
+                std::tie(unadjustedStaticEval, featureHash) =
+                  evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us]);
+                return unadjustedStaticEval;
+            }
+            else
+                value_draw(thisThread->nodes);
+        }
 
         // Step 3. Mate distance pruning. Even if we mate at the next move our score
         // would be at best mate_in(ss->ply + 1), but if alpha is already bigger because
@@ -698,12 +708,11 @@ Value Search::Worker::search(
     }
 
     // Step 6. Static evaluation of the position
-    Value unadjustedStaticEval = VALUE_NONE;
     if (ss->inCheck)
     {
         // Skip early pruning when in check
-        ss->staticEval = eval = VALUE_NONE;
-        improving             = false;
+        unadjustedStaticEval = ss->staticEval = eval = VALUE_NONE;
+        improving                                    = false;
         goto moves_loop;
     }
     else if (excludedMove)
@@ -718,7 +727,7 @@ Value Search::Worker::search(
         // Never assume anything about values stored in TT
         unadjustedStaticEval = tte->eval();
         if (unadjustedStaticEval == VALUE_NONE)
-            unadjustedStaticEval =
+            std::tie(unadjustedStaticEval, featureHash) =
               evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us]);
         else if (PvNode)
             Eval::NNUE::hint_common_parent_position(pos, networks[numaAccessToken], refreshTable);
@@ -731,7 +740,7 @@ Value Search::Worker::search(
     }
     else
     {
-        unadjustedStaticEval =
+        std::tie(unadjustedStaticEval, featureHash) =
           evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us]);
         ss->staticEval = eval = to_corrected_static_eval(unadjustedStaticEval, *thisThread, pos);
 
@@ -1418,9 +1427,10 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     Key      posKey;
     Move     ttMove, move, bestMove;
     Depth    ttDepth;
-    Value    bestValue, value, ttValue, futilityBase;
+    Value    bestValue, value, ttValue, futilityBase, unadjustedStaticEval;
     bool     pvHit, givesCheck, capture;
     int      moveCount;
+    uint16_t featureHash;
     Color    us = pos.side_to_move();
 
     // Step 1. Initialize node
@@ -1430,10 +1440,12 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
         ss->pv[0]    = Move::none();
     }
 
-    Worker* thisThread = this;
-    bestMove           = Move::none();
-    ss->inCheck        = pos.checkers();
-    moveCount          = 0;
+    Worker* thisThread   = this;
+    bestMove             = Move::none();
+    ss->inCheck          = pos.checkers();
+    moveCount            = 0;
+    featureHash          = 0;
+    unadjustedStaticEval = VALUE_NONE;
 
     // Used to send selDepth info to GUI (selDepth counts from 1, ply from 0)
     if (PvNode && thisThread->selDepth < ss->ply + 1)
@@ -1441,9 +1453,16 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
 
     // Step 2. Check for an immediate draw or maximum ply reached
     if (pos.is_draw(ss->ply) || ss->ply >= MAX_PLY)
-        return (ss->ply >= MAX_PLY && !ss->inCheck)
-               ? evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us])
-               : VALUE_DRAW;
+    {
+        if (ss->ply >= MAX_PLY && !ss->inCheck)
+        {
+            std::tie(unadjustedStaticEval, featureHash) =
+              evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us]);
+            return unadjustedStaticEval;
+        }
+        else
+            value_draw(thisThread->nodes);
+    }
 
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
 
@@ -1466,9 +1485,11 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
         return ttValue;
 
     // Step 4. Static evaluation of the position
-    Value unadjustedStaticEval = VALUE_NONE;
     if (ss->inCheck)
+    {
+        unadjustedStaticEval = ss->staticEval = VALUE_NONE;
         bestValue = futilityBase = -VALUE_INFINITE;
+    }
     else
     {
         if (ss->ttHit)
@@ -1476,7 +1497,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
             // Never assume anything about values stored in TT
             unadjustedStaticEval = tte->eval();
             if (unadjustedStaticEval == VALUE_NONE)
-                unadjustedStaticEval =
+                std::tie(unadjustedStaticEval, featureHash) =
                   evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us]);
             ss->staticEval = bestValue =
               to_corrected_static_eval(unadjustedStaticEval, *thisThread, pos);
@@ -1489,10 +1510,8 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
         else
         {
             // In case of null move search, use previous static eval with a different sign
-            unadjustedStaticEval =
-              (ss - 1)->currentMove != Move::null()
-                ? evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us])
-                : -(ss - 1)->staticEval;
+            std::tie(unadjustedStaticEval, featureHash) =
+              evaluate(networks[numaAccessToken], pos, refreshTable, thisThread->optimism[us]);
             ss->staticEval = bestValue =
               to_corrected_static_eval(unadjustedStaticEval, *thisThread, pos);
         }
