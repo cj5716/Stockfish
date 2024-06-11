@@ -591,7 +591,7 @@ Value Search::Worker::search(
                 return unadjustedStaticEval;
             }
             else
-                value_draw(thisThread->nodes);
+                return value_draw(thisThread->nodes);
         }
 
         // Step 3. Mate distance pruning. Even if we mate at the next move our score
@@ -1461,7 +1461,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
             return unadjustedStaticEval;
         }
         else
-            value_draw(thisThread->nodes);
+            return value_draw(thisThread->nodes);
     }
 
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
