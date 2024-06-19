@@ -534,9 +534,12 @@ Value Search::Worker::search(
     // Limit the depth if extensions made it too large
     depth = std::min(depth, MAX_PLY - 1);
 
+    Move bestMove = Move::none();
+
     // Check if we have an upcoming move that draws by repetition, or
     // if the opponent had an alternative move earlier to this position.
-    if (!rootNode && alpha < VALUE_DRAW && pos.has_game_cycle(ss->ply))
+    // If we have a repetition, set the drawing move to the best move by default.
+    if (!rootNode && alpha < VALUE_DRAW && pos.has_game_cycle(ss->ply, bestMove))
     {
         alpha = value_draw(this->nodes);
         if (alpha >= beta)
@@ -553,7 +556,7 @@ Value Search::Worker::search(
     ASSERT_ALIGNED(&st, Eval::NNUE::CacheLineSize);
 
     Key   posKey;
-    Move  move, excludedMove, bestMove;
+    Move  move, excludedMove;
     Depth extension, newDepth;
     Value bestValue, value, eval, maxValue, probCutBeta, singularValue;
     bool  givesCheck, improving, priorCapture, opponentWorsening;
@@ -603,7 +606,6 @@ Value Search::Worker::search(
 
     assert(0 <= ss->ply && ss->ply < MAX_PLY);
 
-    bestMove             = Move::none();
     (ss + 2)->killers[0] = (ss + 2)->killers[1] = Move::none();
     (ss + 2)->cutoffCnt                         = 0;
     Square prevSq = ((ss - 1)->currentMove).is_ok() ? ((ss - 1)->currentMove).to_sq() : SQ_NONE;
@@ -1410,9 +1412,12 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     assert(PvNode || (alpha == beta - 1));
     assert(depth <= 0);
 
+    Move bestMove = Move::none();
+
     // Check if we have an upcoming move that draws by repetition, or if
     // the opponent had an alternative move earlier to this position. (~1 Elo)
-    if (alpha < VALUE_DRAW && pos.has_game_cycle(ss->ply))
+    // If we have a repetition, set the drawing move to the best move by default.
+    if (alpha < VALUE_DRAW && pos.has_game_cycle(ss->ply, bestMove))
     {
         alpha = value_draw(this->nodes);
         if (alpha >= beta)
@@ -1424,7 +1429,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     ASSERT_ALIGNED(&st, Eval::NNUE::CacheLineSize);
 
     Key   posKey;
-    Move  move, bestMove;
+    Move  move;
     Value bestValue, value, futilityBase;
     bool  pvHit, givesCheck, capture;
     int   moveCount;
@@ -1438,7 +1443,6 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     }
 
     Worker* thisThread = this;
-    bestMove           = Move::none();
     ss->inCheck        = pos.checkers();
     moveCount          = 0;
 
