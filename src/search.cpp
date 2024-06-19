@@ -542,7 +542,7 @@ Value Search::Worker::search(
     if (!rootNode && alpha < VALUE_DRAW && pos.has_game_cycle(ss->ply, bestMove))
     {
         alpha = value_draw(this->nodes);
-        if (PvNode)
+        if (PvNode && ss->ply < MAX_PLY)
             update_pv(ss->pv, bestMove, (ss + 1)->pv);
         if (alpha >= beta)
             return alpha;
@@ -1422,7 +1422,7 @@ Value Search::Worker::qsearch(Position& pos, Stack* ss, Value alpha, Value beta,
     if (alpha < VALUE_DRAW && pos.has_game_cycle(ss->ply, bestMove))
     {
         alpha = value_draw(this->nodes);
-        if (PvNode)
+        if (PvNode && ss->ply < MAX_PLY)
             update_pv(ss->pv, bestMove, (ss + 1)->pv);
         if (alpha >= beta)
             return alpha;
