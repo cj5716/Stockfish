@@ -64,12 +64,12 @@ void find_nnz(const std::int32_t* input, std::uint16_t* out, IndexType& count_ou
             #else
                 #define vec_nnz(a) \
                     _mm256_movemask_ps( \
-                      _mm256_castsi256_ps(_mm256_cmpgt_epi32(a, _mm256_setzero_si256())))
+                      _mm256_castsi256_ps(_mm256_sub_epi32(_mm256_setzero_si256(), a)))
             #endif
         #elif defined(USE_SSSE3)
     using vec_t = __m128i;
             #define vec_nnz(a) \
-                _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(a, _mm_setzero_si128())))
+                _mm_movemask_ps(_mm_castsi128_ps(_mm_sub_epi32(_mm_setzero_si128(), a)))
         #endif
     using vec128_t = __m128i;
         #define vec128_zero _mm_setzero_si128()
