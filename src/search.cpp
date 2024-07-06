@@ -1249,12 +1249,32 @@ moves_loop:  // When in check, search starts here
 
         // For PV nodes only, do a full PV search on the first move or after a fail high,
         // otherwise let the parent node fail low with value <= alpha and try another move.
-        if (PvNode && (moveCount == 1 || value > alpha))
+        // If the lower bound of the value can already fail high, then it does not matter to find the true value of the node.
+        // However, at root we must still determine the true value in order to set aspiration windows accurately.
+        if (PvNode && (moveCount == 1 || (value > alpha && (rootNode || value < beta))))
         {
             (ss + 1)->pv    = pv;
             (ss + 1)->pv[0] = Move::none();
+            if (value > alpha)
+                value = -search<PV>(pos, ss + 1, -beta, -alpha, newDepth, false);
+            else
+            {
+                // Value is the lower-bound value of the node, since it was the fail-high value of the zero-window search.
+                // Thus, we use it as it is a tighter lower bound than alpha.
+                Value oldValue = value;
+                value = -search<PV>(pos, ss + 1, -beta, -oldValue, newDepth, false);
 
-            value = -search<PV>(pos, ss + 1, -beta, -alpha, newDepth, false);
+                // If we fail low, then the value serves as an upper bound.
+                // If the value still raises alpha, we need to determine its true value by doing a full search.
+                // (we remove the case where value == oldValue, because score was also the lower-bound value of the zero-window search,
+                //  and as it is bounded by both sides, we know that it is actually exact.)
+                if (value > alpha && value < oldValue)
+                {
+                    (ss + 1)->pv    = pv;
+                    (ss + 1)->pv[0] = Move::none();
+                    value = -search<PV>(pos, ss + 1, -beta, -alpha, newDepth, false);
+                }
+            }
         }
 
         // Step 19. Undo move
