@@ -56,13 +56,6 @@ using psqt_vec_t = __m256i;
     #define vec_add_16(a, b) _mm512_add_epi16(a, b)
     #define vec_sub_16(a, b) _mm512_sub_epi16(a, b)
     #define vec_mulhi_16(a, b) _mm512_mulhi_epi16(a, b)
-    #define vec_zero() _mm512_setzero_epi32()
-    #define vec_set_16(a) _mm512_set1_epi16(a)
-    #define vec_max_16(a, b) _mm512_max_epi16(a, b)
-    #define vec_min_16(a, b) _mm512_min_epi16(a, b)
-    #define vec_slli_16(a, b) _mm512_slli_epi16(a, b)
-    // Inverse permuted at load time
-    #define vec_packus_16(a, b) _mm512_packus_epi16(a, b)
     #define vec_load_psqt(a) _mm256_load_si256(a)
     #define vec_store_psqt(a, b) _mm256_store_si256(a, b)
     #define vec_add_psqt_32(a, b) _mm256_add_epi32(a, b)
@@ -78,14 +71,6 @@ using psqt_vec_t = __m256i;
     #define vec_store(a, b) _mm256_store_si256(a, b)
     #define vec_add_16(a, b) _mm256_add_epi16(a, b)
     #define vec_sub_16(a, b) _mm256_sub_epi16(a, b)
-    #define vec_mulhi_16(a, b) _mm256_mulhi_epi16(a, b)
-    #define vec_zero() _mm256_setzero_si256()
-    #define vec_set_16(a) _mm256_set1_epi16(a)
-    #define vec_max_16(a, b) _mm256_max_epi16(a, b)
-    #define vec_min_16(a, b) _mm256_min_epi16(a, b)
-    #define vec_slli_16(a, b) _mm256_slli_epi16(a, b)
-    // Inverse permuted at load time
-    #define vec_packus_16(a, b) _mm256_packus_epi16(a, b)
     #define vec_load_psqt(a) _mm256_load_si256(a)
     #define vec_store_psqt(a, b) _mm256_store_si256(a, b)
     #define vec_add_psqt_32(a, b) _mm256_add_epi32(a, b)
@@ -101,13 +86,6 @@ using psqt_vec_t = __m128i;
     #define vec_store(a, b) *(a) = (b)
     #define vec_add_16(a, b) _mm_add_epi16(a, b)
     #define vec_sub_16(a, b) _mm_sub_epi16(a, b)
-    #define vec_mulhi_16(a, b) _mm_mulhi_epi16(a, b)
-    #define vec_zero() _mm_setzero_si128()
-    #define vec_set_16(a) _mm_set1_epi16(a)
-    #define vec_max_16(a, b) _mm_max_epi16(a, b)
-    #define vec_min_16(a, b) _mm_min_epi16(a, b)
-    #define vec_slli_16(a, b) _mm_slli_epi16(a, b)
-    #define vec_packus_16(a, b) _mm_packus_epi16(a, b)
     #define vec_load_psqt(a) (*(a))
     #define vec_store_psqt(a, b) *(a) = (b)
     #define vec_add_psqt_32(a, b) _mm_add_epi32(a, b)
@@ -123,14 +101,6 @@ using psqt_vec_t = int32x4_t;
     #define vec_store(a, b) *(a) = (b)
     #define vec_add_16(a, b) vaddq_s16(a, b)
     #define vec_sub_16(a, b) vsubq_s16(a, b)
-    #define vec_mulhi_16(a, b) vqdmulhq_s16(a, b)
-    #define vec_zero() \
-        vec_t { 0 }
-    #define vec_set_16(a) vdupq_n_s16(a)
-    #define vec_max_16(a, b) vmaxq_s16(a, b)
-    #define vec_min_16(a, b) vminq_s16(a, b)
-    #define vec_slli_16(a, b) vshlq_s16(a, vec_set_16(b))
-    #define vec_packus_16(a, b) reinterpret_cast<vec_t>(vcombine_u8(vqmovun_s16(a), vqmovun_s16(b)))
     #define vec_load_psqt(a) (*(a))
     #define vec_store_psqt(a, b) *(a) = (b)
     #define vec_add_psqt_32(a, b) vaddq_s32(a, b)
@@ -209,15 +179,10 @@ class FeatureTransformer {
 #endif
 
    public:
-    // Output type
-    using OutputType = TransformedFeatureType;
 
     // Number of input/output dimensions
     static constexpr IndexType InputDimensions  = FeatureSet::Dimensions;
     static constexpr IndexType OutputDimensions = HalfDimensions;
-
-    // Size of forward propagation buffer
-    static constexpr std::size_t BufferSize = OutputDimensions * sizeof(OutputType);
 
     // Hash value embedded in the evaluation file
     static constexpr std::uint32_t get_hash_value() {
@@ -321,7 +286,6 @@ class FeatureTransformer {
     // Convert input features
     std::int32_t transform(const Position&                           pos,
                            AccumulatorCaches::Cache<HalfDimensions>* cache,
-                           OutputType*                               output,
                            int                                       bucket) const {
         update_accumulator<WHITE>(pos, cache);
         update_accumulator<BLACK>(pos, cache);
@@ -331,6 +295,8 @@ class FeatureTransformer {
         const auto  psqt =
           (psqtAccumulation[perspectives[0]][bucket] - psqtAccumulation[perspectives[1]][bucket])
           / 2;
+
+        return psqt;
 
         const auto& accumulation = (pos.state()->*accPtr).accumulation;
 
