@@ -32,7 +32,7 @@
 #include "simd.h"
 
 /*
-  This file contains the definition for a fully connected layer (aka affine transform) with block sparse input.
+  This file contains the definition for the activation of both accumulators, followed by a fully connected layer (aka affine transform) with block sparse input.
 */
 
 namespace Stockfish::Eval::NNUE::Layers {
@@ -49,6 +49,7 @@ alignas(CacheLineSize) static inline const
       }
       return v;
   }();
+#endif
 
 // Sparse input implementation
 template<IndexType InDims, IndexType OutDims>

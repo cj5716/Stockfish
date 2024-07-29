@@ -92,7 +92,8 @@ struct NetworkArchitecture {
             && fc_2.write_parameters(stream);
     }
 
-    std::int32_t propagate(const Position &pos) {
+    template<typename T>
+    std::int32_t propagate(const T* us, const T* them) {
         struct alignas(CacheLineSize) Buffer {
             alignas(CacheLineSize) typename decltype(fc_0)::OutputBuffer fc_0_out;
             alignas(CacheLineSize) typename decltype(ac_sqr_0)::OutputType
@@ -114,9 +115,7 @@ struct NetworkArchitecture {
         alignas(CacheLineSize) static thread_local Buffer buffer;
 #endif
 
-        const auto& accumulation = (pos.state()->*accPtr).accumulation;
-        
-        fc_0.propagate(accumulation[pos.side_to_move()], accumulation[~pos.side_to_move()], buffer.fc_0_out);
+        fc_0.propagate(us, them, buffer.fc_0_out);
         ac_sqr_0.propagate(buffer.fc_0_out, buffer.ac_sqr_0_out);
         ac_0.propagate(buffer.fc_0_out, buffer.ac_0_out);
         std::memcpy(buffer.ac_sqr_0_out + FC_0_OUTPUTS, buffer.ac_0_out,

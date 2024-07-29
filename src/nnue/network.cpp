@@ -79,7 +79,6 @@ EmbeddedNNUE get_embedded(EmbeddedNNUEType type) {
 
 }
 
-
 namespace Stockfish::Eval::NNUE {
 
 
@@ -214,8 +213,10 @@ Network<Arch, Transformer>::evaluate(const Position&                         pos
     constexpr uint64_t alignment = CacheLineSize;
 
     const int  bucket     = (pos.count<ALL_PIECES>() - 1) / 4;
+
+    const auto& accumulation = (pos.state()->*accPtr).accumulation;
     const auto psqt       = featureTransformer->transform(pos, cache, bucket);
-    const auto positional = network[bucket].propagate(pos);
+    const auto positional = network[bucket].propagate(accumulation[pos.side_to_move()], accumulation[~pos.side_to_move()]);
     return {static_cast<Value>(psqt / OutputScale), static_cast<Value>(positional / OutputScale)};
 }
 
