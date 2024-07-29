@@ -39,9 +39,9 @@ namespace Stockfish::Eval::NNUE::Layers {
 
 #if (USE_SSSE3 | (USE_NEON >= 8))
 alignas(CacheLineSize) static inline const
-  std::array<std::array<std::uint16_t, 8>, 256> lookup_indices = []() {
-      std::array<std::array<std::uint16_t, 8>, 256> v{};
-      for (unsigned i = 0; i < 256; ++i)
+  std::array<std::array<std::uint16_t, 8>, 32768> lookup_indices = []() {
+      std::array<std::array<std::uint16_t, 8>, 32768> v{};
+      for (unsigned i = 0; i < 32768; ++i)
       {
           std::uint64_t j = i, k = 0;
           while (j)
@@ -125,7 +125,8 @@ class AffineTransformSparseInput {
 #if (USE_SSSE3 | (USE_NEON >= 8))
     #if defined(USE_AVX512)
         using invec_t  = __m512i;
-        using i8vec_t  = __m512i;
+        using u8vec_t  = __m512i;
+        using u32vec_t = __m512i;
         using outvec_t = __m512i;
         #define vec_mulhi_16(a, b) _mm512_mulhi_epi16(a, b)
         #define vec_zero() _mm512_setzero_epi32()
@@ -134,12 +135,13 @@ class AffineTransformSparseInput {
         #define vec_min_16(a, b) _mm512_min_epi16(a, b)
         #define vec_slli_16(a, b) _mm512_slli_epi16(a, b)
         #define vec_packus_16(a, b) _mm512_packus_epi16(a, b)
-        #define vec_broadcastd_32(a) _mm512_broadcastd_epi32(a)
+        #define vec_broadcast_nth_u32(a, n) _mm512_permutexvar_epi32(_mm512_set1_epi32(n), a)
         #define vec_add_dpbusd_32 Simd::m512_add_dpbusd_epi32
         #define vec_nnz(a) _mm512_cmpgt_epi32_mask(a, _mm512_setzero_si512())
     #elif defined(USE_AVX2)
         using invec_t  = __m256i;
-        using i8vec_t  = __m256i;
+        using u8vec_t  = __m256i;
+        using u32vec_t = __m256i;
         using outvec_t = __m256i;
         #define vec_mulhi_16(a, b) _mm256_mulhi_epi16(a, b)
         #define vec_zero() _mm256_setzero_si256()
@@ -148,7 +150,7 @@ class AffineTransformSparseInput {
         #define vec_min_16(a, b) _mm256_min_epi16(a, b)
         #define vec_slli_16(a, b) _mm256_slli_epi16(a, b)
         #define vec_packus_16(a, b) _mm256_packus_epi16(a, b)
-        #define vec_broadcastd_32(a) _mm256_broadcastd_epi32(a)
+        #define vec_broadcast_nth_u32(a, n) _mm256_permutevar8x32_epi32(_mm256_set1_epi32(n), a)
         #define vec_add_dpbusd_32 Simd::m256_add_dpbusd_epi32
         #if defined(USE_VNNI) && !defined(USE_AVXVNNI)
             #define vec_nnz(a) _mm256_cmpgt_epi32_mask(a, _mm256_setzero_si256())
@@ -159,7 +161,8 @@ class AffineTransformSparseInput {
         #endif
     #elif defined(USE_SSSE3)
         using invec_t  = __m128i;
-        using i8vec_t  = __m128i;
+        using u8vec_t  = __m128i;
+        using u32vec_t = __m128i;
         using outvec_t = __m128i;
         #define vec_mulhi_16(a, b) _mm_mulhi_epi16(a, b)
         #define vec_zero() _mm_setzero_si128()
@@ -168,13 +171,14 @@ class AffineTransformSparseInput {
         #define vec_min_16(a, b) _mm_min_epi16(a, b)
         #define vec_slli_16(a, b) _mm_slli_epi16(a, b)
         #define vec_packus_16(a, b) _mm_packus_epi16(a, b)
-        #define vec_broadcastd_32(a) _mm_set1_epi32(_mm_cvtsi128_si32(a))
+        #define vec_broadcast_nth_u32(a, n) _mm_cvtsi128_si32(_mm_bsrli_si128(a, n * 4))
         #define vec_add_dpbusd_32 Simd::m128_add_dpbusd_epi32
         #define vec_nnz(a) \
             _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(a, _mm_setzero_si128())))
     #elif defined(USE_NEON_DOTPROD)
         using invec_t  = int16x8_t;
-        using i8vec_t  = int8x16_t;
+        using u8vec_t  = int8x16_t;
+        using u32vec_t = uint32x4_t;
         using outvec_t = int32x4_t;
         #define vec_mulhi_16(a, b) vqdmulhq_s16(a, b)
         #define vec_zero() invec_t { 0 }
@@ -183,12 +187,13 @@ class AffineTransformSparseInput {
         #define vec_min_16(a, b) vminq_s16(a, b)
         #define vec_slli_16(a, b) vshlq_s16(a, vec_set_16(b))
         #define vec_packus_16(a, b) vcombine_u8(vqmovun_s16(a), vqmovun_s16(b))
-        #define vec_broadcastd_32(a) vreinterpretq_s8_u32(vdupq_n_u32(vgetq_lane_s32(a, 0)))
+        #define vec_broadcast_nth_u32(a, n) vreinterpretq_s8_u32(vdupq_n_u32(vgetq_lane_s32(a, n)))
         #define vec_add_dpbusd_32 Simd::dotprod_m128_add_dpbusd_epi32
         #define vec_nnz(a) vaddvq_u32(vandq_u32(vtstq_u32(a, a), vld1q_u32(Mask)))
     #elif defined(USE_NEON)
         using invec_t  = int8x16_t;
-        using i8vec_t  = int8x16_t;
+        using u8vec_t  = int8x16_t;
+        using u32vec_t = uint32x4_t;
         using outvec_t = int32x4_t;
         #define vec_mulhi_16(a, b) vqdmulhq_s16(a, b)
         #define vec_zero() invec_t { 0 }
@@ -197,14 +202,14 @@ class AffineTransformSparseInput {
         #define vec_min_16(a, b) vminq_s16(a, b)
         #define vec_slli_16(a, b) vshlq_s16(a, vec_set_16(b))
         #define vec_packus_16(a, b) vcombine_u8(vqmovun_s16(a), vqmovun_s16(b))
-        #define vec_broadcastd_32(a) vreinterpretq_s8_u32(vdupq_n_u32(vgetq_lane_s32(a, 0)))
+        #define vec_broadcast_nth_u32(a, n) vreinterpretq_s8_u32(vdupq_n_u32(vgetq_lane_s32(a, n)))
         #define vec_add_dpbusd_32 Simd::neon_m128_add_dpbusd_epi32
         #define vec_nnz(a) vaddvq_u32(vandq_u32(vtstq_u32(a, a), vld1q_u32(Mask)))
     #endif
         static constexpr IndexType OutputSimdWidth = sizeof(outvec_t) / sizeof(OutputType);
         static_assert(InputDimensions % 128 == 0);
 
-        constexpr IndexType NumChunks = InputDimensions / 2 / sizeof(i8vec_t);
+        constexpr IndexType NumChunks = InputDimensions / 2 / sizeof(u8vec_t);
         constexpr IndexType NumRegs   = OutputDimensions / OutputSimdWidth;
         IndexType           count;
 
@@ -220,6 +225,10 @@ class AffineTransformSparseInput {
             const invec_t* in0 = &acc[0];
             const invec_t* in1 = &acc[InputDimensions / 2];
             for (IndexType i = 0; i < NumChunks; ++i) {
+
+                // First, we perform ClippedReLU and pairwise multiplication to activate the inputs (accumulators).
+                // Then, we will perform affine transform in a sparse manner.
+
                 // What we want to do is multiply inputs in a pairwise manner (after clipping), and then shift right by 9.
                 // Instead, we shift left by 7, and use mulhi, stripping the bottom 16 bits, effectively shifting right by 16,
                 // resulting in a net shift of 9 bits. We use mulhi because it maintains the sign of the multiplication (unlike mullo),
@@ -229,8 +238,8 @@ class AffineTransformSparseInput {
                 // compensate by shifting less before the multiplication.
                 const invec_t sum0a = vec_max_16(vec_min_16(in0[i * 2 + 0], One), Zero);
                 const invec_t sum1a = vec_min_16(in1[i * 2 + 0], One);
-                const invec_t sum0a = vec_max_16(vec_min_16(in0[i * 2 + 0], One), Zero);
-                const invec_t sum1a = vec_min_16(in1[i * 2 + 0], One);
+                const invec_t sum0b = vec_max_16(vec_min_16(in0[i * 2 + 1], One), Zero);
+                const invec_t sum1b = vec_min_16(in1[i * 2 + 1], One);
 
                 #if defined(USE_NEON)
                 constexpr int shift = 6;
@@ -241,25 +250,38 @@ class AffineTransformSparseInput {
                 const invec_t pa = vec_mulhi_16(vec_slli_16(sum0a, shift), sum1a);
                 const invec_t pb = vec_mulhi_16(vec_slli_16(sum0b, shift), sum1b);
 
-                const invec_t activated = vec_packus_16(pa, pb);
+                const u32vec_t activated = reinterpret_cast<u32vec_t>(vec_packus_16(pa, pb));
+                const uint16_t mask = vec_nnz(activated);
+                const auto nnzs = lookup_indices[mask];
+                const auto nnz_count = popcount(mask);
+                for (IndexType j = 0; j < nnz_count; ++j)
+                {
+                    const auto    index = nnzs[j];
+                    const u8vec_t in = vec_broadcast_nth_u32(activated, index);
+                    const auto    col =
+                      reinterpret_cast<const u8vec_t*>(&weights[(index * ChunkSize + offset + i * sizeof(u8vec_t)) * OutputDimensions]);
+                    for (IndexType k = 0; k < NumRegs; ++k)
+                        vec_add_dpbusd_32(sum[k], in, col[k]);
+                }
             }
-        }
 
-        for (IndexType j = 0; j < count; ++j)
-        {
-            const auto    i  = nnz[j];
-            const invec_t in = vec_set_32(input32[i]);
-            const auto    col =
-              reinterpret_cast<const invec_t*>(&weights[i * OutputDimensions * ChunkSize]);
-            for (IndexType k = 0; k < NumRegs; ++k)
-                vec_add_dpbusd_32(sum[k], in, col[k]);
+            offset += InputDimensions / 2;
         }
 
         outvec_t* outptr = reinterpret_cast<outvec_t*>(output);
         for (IndexType k = 0; k < NumRegs; ++k)
             outptr[k] = sum[k];
-    #undef vec_set_32
+
+    #undef vec_mulhi_16
+    #undef vec_zero
+    #undef vec_set_16
+    #undef vec_max_16
+    #undef vec_min_16
+    #undef vec_slli_16
+    #undef vec_packus_16
+    #undef vec_broadcastd_32
     #undef vec_add_dpbusd_32
+    #undef vec_nnz
 #else
         IndexType offset = 0;
 
