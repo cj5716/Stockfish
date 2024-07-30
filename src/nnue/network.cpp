@@ -207,11 +207,8 @@ template<typename Arch, typename Transformer>
 NetworkOutput
 Network<Arch, Transformer>::evaluate(const Position&                         pos,
                                      AccumulatorCaches::Cache<FTDimensions>* cache) const {
-    // We manually align the arrays on the stack because with gcc < 9.3
-    // overaligning stack variables with alignas() doesn't work correctly.
-
-
     const int  bucket     = (pos.count<ALL_PIECES>() - 1) / 4;
+    const auto StateInfo::*accPtr = Transformer::*accPtr;
     const auto& accumulation = (pos.state()->*accPtr).accumulation;
     const auto psqt       = featureTransformer->transform(pos, cache, bucket);
     const auto positional = network[bucket].propagate(accumulation[pos.side_to_move()], accumulation[~pos.side_to_move()]);
@@ -265,9 +262,10 @@ Network<Arch, Transformer>::trace_evaluate(const Position&                      
 
     NnueEvalTrace t{};
     t.correctBucket = (pos.count<ALL_PIECES>() - 1) / 4;
+    const auto& accumulation = (pos.state()->*accPtr).accumulation;
+    const auto StateInfo::*accPtr = Transformer::*accPtr;
     for (IndexType bucket = 0; bucket < LayerStacks; ++bucket)
     {
-        const auto& accumulation = (pos.state()->*accPtr).accumulation;
         const auto psqt = featureTransformer->transform(pos, cache, bucket);
         const auto positional = network[bucket].propagate(accumulation[pos.side_to_move()], accumulation[~pos.side_to_move()]);
 
