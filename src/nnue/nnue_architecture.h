@@ -91,8 +91,7 @@ struct NetworkArchitecture {
             && fc_2.write_parameters(stream);
     }
 
-    template<typename T>
-    std::int32_t propagate(const T* us, const T* them) {
+    std::int32_t propagate(const Layers::AffineTransformSparseInput<L1, L2>::InputType* us, const Layers::AffineTransformSparseInput<L1, L2>::InputType* them) {
         struct alignas(CacheLineSize) Buffer {
             alignas(CacheLineSize) typename decltype(fc_0)::OutputBuffer fc_0_out;
             alignas(CacheLineSize) typename decltype(ac_sqr_0)::OutputType

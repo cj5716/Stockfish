@@ -210,10 +210,8 @@ Network<Arch, Transformer>::evaluate(const Position&                         pos
     // We manually align the arrays on the stack because with gcc < 9.3
     // overaligning stack variables with alignas() doesn't work correctly.
 
-    constexpr uint64_t alignment = CacheLineSize;
 
     const int  bucket     = (pos.count<ALL_PIECES>() - 1) / 4;
-
     const auto& accumulation = (pos.state()->*accPtr).accumulation;
     const auto psqt       = featureTransformer->transform(pos, cache, bucket);
     const auto positional = network[bucket].propagate(accumulation[pos.side_to_move()], accumulation[~pos.side_to_move()]);
@@ -264,32 +262,16 @@ template<typename Arch, typename Transformer>
 NnueEvalTrace
 Network<Arch, Transformer>::trace_evaluate(const Position&                         pos,
                                            AccumulatorCaches::Cache<FTDimensions>* cache) const {
-    // We manually align the arrays on the stack because with gcc < 9.3
-    // overaligning stack variables with alignas() doesn't work correctly.
-    constexpr uint64_t alignment = CacheLineSize;
-
-#if defined(ALIGNAS_ON_STACK_VARIABLES_BROKEN)
-    TransformedFeatureType
-      transformedFeaturesUnaligned[FeatureTransformer<FTDimensions, nullptr>::BufferSize
-                                   + alignment / sizeof(TransformedFeatureType)];
-
-    auto* transformedFeatures = align_ptr_up<alignment>(&transformedFeaturesUnaligned[0]);
-#else
-    alignas(alignment) TransformedFeatureType
-      transformedFeatures[FeatureTransformer<FTDimensions, nullptr>::BufferSize];
-#endif
-
-    ASSERT_ALIGNED(transformedFeatures, alignment);
 
     NnueEvalTrace t{};
     t.correctBucket = (pos.count<ALL_PIECES>() - 1) / 4;
     for (IndexType bucket = 0; bucket < LayerStacks; ++bucket)
     {
-        const auto materialist =
-          featureTransformer->transform(pos, cache, transformedFeatures, bucket);
-        const auto positional = network[bucket].propagate(transformedFeatures);
+        const auto& accumulation = (pos.state()->*accPtr).accumulation;
+        const auto psqt = featureTransformer->transform(pos, cache, bucket);
+        const auto positional = network[bucket].propagate(accumulation[pos.side_to_move()], accumulation[~pos.side_to_move()]);
 
-        t.psqt[bucket]       = static_cast<Value>(materialist / OutputScale);
+        t.psqt[bucket]       = static_cast<Value>(psqt / OutputScale);
         t.positional[bucket] = static_cast<Value>(positional / OutputScale);
     }
 

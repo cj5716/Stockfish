@@ -284,17 +284,21 @@ class AffineTransformSparseInput {
     #undef vec_add_dpbusd_32
     #undef vec_nnz
 #else
-        IndexType offset = 0;
+    IndexType offset = 0;
 
+    static constexpr std::size_t BufferSize = InputDimensions * sizeof(OutputType);
+
+    // We manually align the arrays on the stack because with gcc < 9.3
+    // overaligning stack variables with alignas() doesn't work correctly.
     #if defined(ALIGNAS_ON_STACK_VARIABLES_BROKEN)
         AffineType
-          transformedFeaturesUnaligned[FeatureTransformer<FTDimensions, nullptr>::BufferSize
+          transformedFeaturesUnaligned[BufferSize
                                        + alignment / sizeof(AffineType)];
 
         auto* transformedFeatures = align_ptr_up<alignment>(&transformedFeaturesUnaligned[0]);
     #else
         alignas(alignment) AffineType
-          transformedFeatures[FeatureTransformer<FTDimensions, nullptr>::BufferSize];
+          transformedFeatures[BufferSize];
     #endif
 
         ASSERT_ALIGNED(transformedFeatures, alignment);
