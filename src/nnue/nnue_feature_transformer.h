@@ -51,6 +51,8 @@ static_assert(PSQTBuckets % 8 == 0,
 #ifdef USE_AVX512
 using vec_t      = __m512i;
 using psqt_vec_t = __m256i;
+using vec128_t = __m128i;
+
     #define vec_load(a) _mm512_load_si512(a)
     #define vec_store(a, b) _mm512_store_si512(a, b)
     #define vec_add_16(a, b) _mm512_add_epi16(a, b)
@@ -63,17 +65,28 @@ using psqt_vec_t = __m256i;
     #define vec_slli_16(a, b) _mm512_slli_epi16(a, b)
     // Inverse permuted at load time
     #define vec_packus_16(a, b) _mm512_packus_epi16(a, b)
+    #define vec_nnz(a) _mm512_cmpgt_epi32_mask(a, _mm512_setzero_si512())
+
+    #define vec128_zero _mm_setzero_si128()
+    #define vec128_set_16(a) _mm_set1_epi16(a)
+    #define vec128_load(a) _mm_load_si128(a)
+    #define vec128_storeu(a, b) _mm_storeu_si128(a, b)
+    #define vec128_add(a, b) _mm_add_epi16(a, b)
+
     #define vec_load_psqt(a) _mm256_load_si256(a)
     #define vec_store_psqt(a, b) _mm256_store_si256(a, b)
     #define vec_add_psqt_32(a, b) _mm256_add_epi32(a, b)
     #define vec_sub_psqt_32(a, b) _mm256_sub_epi32(a, b)
     #define vec_zero_psqt() _mm256_setzero_si256()
+
     #define NumRegistersSIMD 16
     #define MaxChunkSize 64
 
 #elif USE_AVX2
 using vec_t      = __m256i;
 using psqt_vec_t = __m256i;
+using vec128_t = __m128i;
+
     #define vec_load(a) _mm256_load_si256(a)
     #define vec_store(a, b) _mm256_store_si256(a, b)
     #define vec_add_16(a, b) _mm256_add_epi16(a, b)
@@ -86,6 +99,20 @@ using psqt_vec_t = __m256i;
     #define vec_slli_16(a, b) _mm256_slli_epi16(a, b)
     // Inverse permuted at load time
     #define vec_packus_16(a, b) _mm256_packus_epi16(a, b)
+    #if defined(USE_VNNI) && !defined(USE_AVXVNNI)
+        #define vec_nnz(a) _mm256_cmpgt_epi32_mask(a, _mm256_setzero_si256())
+    #else
+        #define vec_nnz(a) \
+            _mm256_movemask_ps( \
+              _mm256_castsi256_ps(_mm256_cmpgt_epi32(a, _mm256_setzero_si256())))
+    #endif
+
+    #define vec128_zero _mm_setzero_si128()
+    #define vec128_set_16(a) _mm_set1_epi16(a)
+    #define vec128_load(a) _mm_load_si128(a)
+    #define vec128_storeu(a, b) _mm_storeu_si128(a, b)
+    #define vec128_add(a, b) _mm_add_epi16(a, b)
+
     #define vec_load_psqt(a) _mm256_load_si256(a)
     #define vec_store_psqt(a, b) _mm256_store_si256(a, b)
     #define vec_add_psqt_32(a, b) _mm256_add_epi32(a, b)
@@ -94,9 +121,11 @@ using psqt_vec_t = __m256i;
     #define NumRegistersSIMD 16
     #define MaxChunkSize 32
 
-#elif USE_SSE2
+#elif USE_SSSE3
 using vec_t      = __m128i;
 using psqt_vec_t = __m128i;
+using vec128_t = __m128i;
+
     #define vec_load(a) (*(a))
     #define vec_store(a, b) *(a) = (b)
     #define vec_add_16(a, b) _mm_add_epi16(a, b)
@@ -108,6 +137,15 @@ using psqt_vec_t = __m128i;
     #define vec_min_16(a, b) _mm_min_epi16(a, b)
     #define vec_slli_16(a, b) _mm_slli_epi16(a, b)
     #define vec_packus_16(a, b) _mm_packus_epi16(a, b)
+    #define vec_nnz(a) \
+                _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(a, _mm_setzero_si128())))
+
+    #define vec128_zero _mm_setzero_si128()
+    #define vec128_set_16(a) _mm_set1_epi16(a)
+    #define vec128_load(a) _mm_load_si128(a)
+    #define vec128_storeu(a, b) _mm_storeu_si128(a, b)
+    #define vec128_add(a, b) _mm_add_epi16(a, b)
+
     #define vec_load_psqt(a) (*(a))
     #define vec_store_psqt(a, b) *(a) = (b)
     #define vec_add_psqt_32(a, b) _mm_add_epi32(a, b)
@@ -116,9 +154,11 @@ using psqt_vec_t = __m128i;
     #define NumRegistersSIMD (Is64Bit ? 16 : 8)
     #define MaxChunkSize 16
 
-#elif USE_NEON
+#elif (USE_NEON >= 8)
 using vec_t      = int16x8_t;
 using psqt_vec_t = int32x4_t;
+using vec128_t   = uint16x8_t;
+
     #define vec_load(a) (*(a))
     #define vec_store(a, b) *(a) = (b)
     #define vec_add_16(a, b) vaddq_s16(a, b)
@@ -131,6 +171,15 @@ using psqt_vec_t = int32x4_t;
     #define vec_min_16(a, b) vminq_s16(a, b)
     #define vec_slli_16(a, b) vshlq_s16(a, vec_set_16(b))
     #define vec_packus_16(a, b) reinterpret_cast<vec_t>(vcombine_u8(vqmovun_s16(a), vqmovun_s16(b)))
+    static const std::uint32_t Mask[4] = {1, 2, 4, 8};
+    #define vec_nnz(a) vaddvq_u32(vandq_u32(vtstq_u32(a, a), vld1q_u32(Mask)))
+
+    #define vec128_zero vdupq_n_u16(0)
+    #define vec128_set_16(a) vdupq_n_u16(a)
+    #define vec128_load(a) vld1q_u16(reinterpret_cast<const std::uint16_t*>(a))
+    #define vec128_storeu(a, b) vst1q_u16(reinterpret_cast<std::uint16_t*>(a), b)
+    #define vec128_add(a, b) vaddq_u16(a, b)
+
     #define vec_load_psqt(a) (*(a))
     #define vec_store_psqt(a, b) *(a) = (b)
     #define vec_add_psqt_32(a, b) vaddq_s32(a, b)
@@ -318,6 +367,20 @@ class FeatureTransformer {
         return !stream.fail();
     }
 
+    #if VECTOR
+    alignas(CacheLineSize) static inline const
+      std::array<std::array<std::uint16_t, 8>, 256> lookup_indices = []() {
+          std::array<std::array<std::uint16_t, 8>, 256> v{};
+          for (unsigned i = 0; i < 256; ++i)
+          {
+              std::uint64_t j = i, k = 0;
+              while (j)
+                  v[i][k++] = pop_lsb(j);
+          }
+          return v;
+      }();
+    #endif
+
     // Convert input features
     std::int32_t transform(const Position&                           pos,
                            AccumulatorCaches::Cache<HalfDimensions>* cache,
@@ -338,7 +401,7 @@ class FeatureTransformer {
         {
             const IndexType offset = (HalfDimensions / 2) * p;
 
-#if defined(VECTOR)
+#if VECTOR
 
             constexpr IndexType OutputChunkSize = MaxChunkSize;
             static_assert((HalfDimensions / 2) % OutputChunkSize == 0);
@@ -352,7 +415,7 @@ class FeatureTransformer {
               reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][HalfDimensions / 2]));
             vec_t* out = reinterpret_cast<vec_t*>(output + offset);
 
-            for (IndexType j = 0; j < NumOutputChunks; ++j)
+            for (IndexType j = 0; j < NumOutputChunks; j += 2)
             {
                     // What we want to do is multiply inputs in a pairwise manner
                     // (after clipping), and then shift right by 9. Instead, we
@@ -372,17 +435,25 @@ class FeatureTransformer {
     #else
                 constexpr int shift = 6;
     #endif
-                const vec_t sum0a =
-                  vec_slli_16(vec_max_16(vec_min_16(in0[j * 2 + 0], One), Zero), shift);
-                const vec_t sum0b =
-                  vec_slli_16(vec_max_16(vec_min_16(in0[j * 2 + 1], One), Zero), shift);
-                const vec_t sum1a = vec_min_16(in1[j * 2 + 0], One);
-                const vec_t sum1b = vec_min_16(in1[j * 2 + 1], One);
 
-                const vec_t pa = vec_mulhi_16(sum0a, sum1a);
-                const vec_t pb = vec_mulhi_16(sum0b, sum1b);
+                constexpr int MaskWidth = sizeof(vec_t) / sizeof(int32_t);
+                uint32_t currMask = 0;
+                for (IndexType k = 0; k < 2; ++k) {
+                    const vec_t sum0a =
+                      vec_max_16(vec_min_16(in0[(j + k) * 2 + 0], One), Zero);
+                    const vec_t sum0b =
+                      vec_max_16(vec_min_16(in0[(j + k) * 2 + 1], One), Zero);
+                    const vec_t sum1a = vec_min_16(in1[(j + k) * 2 + 0], One);
+                    const vec_t sum1b = vec_min_16(in1[(j + k) * 2 + 1], One);
 
-                out[j] = vec_packus_16(pa, pb);
+                    const vec_t pa = vec_mulhi_16(vec_slli_16(sum0a, shift), sum1a);
+                    const vec_t pb = vec_mulhi_16(vec_slli_16(sum0b, shift), sum1b);
+
+                    const vec_t prod = vec_packus_16(pa, pb);
+
+                    out[j + k] = prod;
+                    currMask |= vec_nnz(prod) << (k * MaskWidth);
+                }
             }
 
 #else
