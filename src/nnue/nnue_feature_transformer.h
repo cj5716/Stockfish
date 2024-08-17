@@ -43,6 +43,7 @@ using PSQTWeightType = std::int32_t;
 // If this flag is marked, we will calculate indices used in sparse affine transform when doing pairwise multiplication.
 #define SPARSE
 #if (USE_SSSE3 | (USE_NEON >= 8))
+    ;
 #else
 #undef SPARSE
 #endif
