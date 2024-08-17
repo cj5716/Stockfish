@@ -106,7 +106,7 @@ class AffineTransformSparseInput {
         return !stream.fail();
     }
     // Forward propagation
-    void propagate(const InputType* input, OutputType* output, [[maybe_unused]] const uint16_t *nnz, [[maybe_unused]] const uint16_t nnzCount) const {
+    void propagate(const InputType* input, OutputType* output, [[maybe_unused]] uint16_t *nnz, [[maybe_unused]] uint16_t nnzCount) const {
 
 #if (USE_SSSE3 | (USE_NEON >= 8))
     #if defined(USE_AVX512)

@@ -91,7 +91,7 @@ struct NetworkArchitecture {
             && fc_2.write_parameters(stream);
     }
 
-    std::int32_t propagate(const TransformedFeatureType* transformedFeatures, [[maybe_unused]] const uint16_t *nnz, [[maybe_unused]] const uint16_t &nnzCount) {
+    std::int32_t propagate(const TransformedFeatureType* transformedFeatures, [[maybe_unused]] uint16_t *nnz, [[maybe_unused]] uint16_t nnzCount) {
         struct alignas(CacheLineSize) Buffer {
             alignas(CacheLineSize) typename decltype(fc_0)::OutputBuffer fc_0_out;
             alignas(CacheLineSize) typename decltype(ac_sqr_0)::OutputType

@@ -226,7 +226,7 @@ Network<Arch, Transformer>::evaluate(const Position&                         pos
 
     ASSERT_ALIGNED(transformedFeatures, alignment);
 
-    [[maybe_unused]] uint16_t nnz[network[0].TransformedFeatureDimensions / 4];
+    [[maybe_unused]] uint16_t nnz[FTDimensions / 4];
     [[maybe_unused]] uint16_t nnzCount;
     const int  bucket     = (pos.count<ALL_PIECES>() - 1) / 4;
     const auto psqt       = featureTransformer->transform(pos, cache, transformedFeatures, bucket, nnz, nnzCount);
@@ -297,7 +297,7 @@ Network<Arch, Transformer>::trace_evaluate(const Position&                      
 
     NnueEvalTrace t{};
     t.correctBucket = (pos.count<ALL_PIECES>() - 1) / 4;
-    [[maybe_unused]] uint16_t nnz[network[0].TransformedFeatureDimensions / 4];
+    [[maybe_unused]] uint16_t nnz[FTDimensions / 4];
     [[maybe_unused]] uint16_t nnzCount;
     for (IndexType bucket = 0; bucket < LayerStacks; ++bucket)
     {

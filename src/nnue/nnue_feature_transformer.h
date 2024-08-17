@@ -378,7 +378,7 @@ class FeatureTransformer {
         return !stream.fail();
     }
 
-    #if SPARSE
+    #ifdef SPARSE
     alignas(CacheLineSize) static inline const
       std::array<std::array<std::uint16_t, 8>, 256> LookupIndices = []() {
           std::array<std::array<std::uint16_t, 8>, 256> v{};
@@ -410,7 +410,7 @@ class FeatureTransformer {
 
         const auto& accumulation = (pos.state()->*accPtr).accumulation;
 
-#if SPARSE
+#ifdef SPARSE
         vec128_t       base        = vec128_zero;
         const vec128_t increment   = vec128_set_16(8);
         nnzCount = 0;
@@ -420,7 +420,7 @@ class FeatureTransformer {
         {
             const IndexType offset = (HalfDimensions / 2) * p;
 
-#if VECTOR
+#ifdef VECTOR
 
             constexpr IndexType OutputChunkSize = MaxChunkSize;
             static_assert((HalfDimensions / 2) % OutputChunkSize == 0);
@@ -444,7 +444,7 @@ class FeatureTransformer {
     #endif
 
                 constexpr int MaskWidth = sizeof(vec_t) / sizeof(int32_t);
-                uint32_t currMask = 0;
+                uint32_t mask = 0;
                 for (IndexType k = 0; k < 2; ++k) {
                     // What we want to do is multiply inputs in a pairwise manner
                     // (after clipping), and then shift right by 9. Instead, we
@@ -471,15 +471,15 @@ class FeatureTransformer {
                     const vec_t prod = vec_packus_16(pa, pb);
 
                     out[j + k] = prod;
-                    #if SPARSE
-                    currMask |= vec_nnz(prod) << (k * MaskWidth);
+                    #ifdef SPARSE
+                    mask |= vec_nnz(prod) << (k * MaskWidth);
                     #endif
                 }
 
-                #if SPARSE
+                #ifdef SPARSE
                 constexpr int NumSlices = MaskWidth / 4;
                 for (IndexType k = 0; k < NumSlices; ++k) {
-                    auto slice = (nnz >> (k * 8)) & 0xFF;
+                    auto slice = (mask >> (k * 8)) & 0xFF;
                     const auto offsets = vec128_load(reinterpret_cast<const vec128_t*>(&LookupIndices[slice]));
                     vec128_storeu(reinterpret_cast<vec128_t*>(&nnz[nnzCount]), vec128_add(base, offsets));
                     nnzCount += popcount(slice);
