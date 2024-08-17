@@ -40,6 +40,13 @@ using BiasType       = std::int16_t;
 using WeightType     = std::int16_t;
 using PSQTWeightType = std::int32_t;
 
+// If this flag is marked, we will calculate indices used in sparse affine transform when doing pairwise multiplication.
+#define SPARSE
+#if (USE_SSSE3 | (USE_NEON >= 8))
+#else
+#undef SPARSE
+#endif
+
 // If vector instructions are enabled, we update and refresh the
 // accumulator tile by tile such that each tile fits in the CPU's
 // vector registers.
@@ -121,7 +128,7 @@ using vec128_t = __m128i;
     #define NumRegistersSIMD 16
     #define MaxChunkSize 32
 
-#elif USE_SSSE3
+#elif USE_SSE2
 using vec_t      = __m128i;
 using psqt_vec_t = __m128i;
 using vec128_t = __m128i;
@@ -137,6 +144,7 @@ using vec128_t = __m128i;
     #define vec_min_16(a, b) _mm_min_epi16(a, b)
     #define vec_slli_16(a, b) _mm_slli_epi16(a, b)
     #define vec_packus_16(a, b) _mm_packus_epi16(a, b)
+#if SPARSE
     #define vec_nnz(a) \
                 _mm_movemask_ps(_mm_castsi128_ps(_mm_cmpgt_epi32(a, _mm_setzero_si128())))
 
@@ -145,6 +153,7 @@ using vec128_t = __m128i;
     #define vec128_load(a) _mm_load_si128(a)
     #define vec128_storeu(a, b) _mm_storeu_si128(a, b)
     #define vec128_add(a, b) _mm_add_epi16(a, b)
+#endif
 
     #define vec_load_psqt(a) (*(a))
     #define vec_store_psqt(a, b) *(a) = (b)
@@ -154,7 +163,7 @@ using vec128_t = __m128i;
     #define NumRegistersSIMD (Is64Bit ? 16 : 8)
     #define MaxChunkSize 16
 
-#elif (USE_NEON >= 8)
+#elif USE_NEON
 using vec_t      = int16x8_t;
 using psqt_vec_t = int32x4_t;
 using vec128_t   = uint16x8_t;
@@ -171,6 +180,7 @@ using vec128_t   = uint16x8_t;
     #define vec_min_16(a, b) vminq_s16(a, b)
     #define vec_slli_16(a, b) vshlq_s16(a, vec_set_16(b))
     #define vec_packus_16(a, b) reinterpret_cast<vec_t>(vcombine_u8(vqmovun_s16(a), vqmovun_s16(b)))
+#if SPARSE
     static const std::uint32_t Mask[4] = {1, 2, 4, 8};
     #define vec_nnz(a) vaddvq_u32(vandq_u32(vtstq_u32(a, a), vld1q_u32(Mask)))
 
@@ -179,6 +189,7 @@ using vec128_t   = uint16x8_t;
     #define vec128_load(a) vld1q_u16(reinterpret_cast<const std::uint16_t*>(a))
     #define vec128_storeu(a, b) vst1q_u16(reinterpret_cast<std::uint16_t*>(a), b)
     #define vec128_add(a, b) vaddq_u16(a, b)
+#endif
 
     #define vec_load_psqt(a) (*(a))
     #define vec_store_psqt(a, b) *(a) = (b)
@@ -193,7 +204,6 @@ using vec128_t   = uint16x8_t;
     #undef VECTOR
 
 #endif
-
 
 #ifdef VECTOR
 
@@ -367,9 +377,9 @@ class FeatureTransformer {
         return !stream.fail();
     }
 
-    #if VECTOR
+    #if SPARSE
     alignas(CacheLineSize) static inline const
-      std::array<std::array<std::uint16_t, 8>, 256> lookup_indices = []() {
+      std::array<std::array<std::uint16_t, 8>, 256> LookupIndices = []() {
           std::array<std::array<std::uint16_t, 8>, 256> v{};
           for (unsigned i = 0; i < 256; ++i)
           {
@@ -385,7 +395,9 @@ class FeatureTransformer {
     std::int32_t transform(const Position&                           pos,
                            AccumulatorCaches::Cache<HalfDimensions>* cache,
                            OutputType*                               output,
-                           int                                       bucket) const {
+                           int                                       bucket,
+                           [[maybe_unused]] uint16_t *nnz,
+                           [[maybe_unused]] uint16_t &nnzCount) const {
         update_accumulator<WHITE>(pos, cache);
         update_accumulator<BLACK>(pos, cache);
 
@@ -396,6 +408,12 @@ class FeatureTransformer {
           / 2;
 
         const auto& accumulation = (pos.state()->*accPtr).accumulation;
+
+#if SPARSE
+        vec128_t       base        = vec128_zero;
+        const vec128_t increment   = vec128_set_16(8);
+        nnzCount = 0;
+#endif
 
         for (IndexType p = 0; p < 2; ++p)
         {
@@ -413,10 +431,20 @@ class FeatureTransformer {
             const vec_t* in0 = reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][0]));
             const vec_t* in1 =
               reinterpret_cast<const vec_t*>(&(accumulation[perspectives[p]][HalfDimensions / 2]));
-            vec_t* out = reinterpret_cast<vec_t*>(output + offset);
+            vec_t* out = reinterpret_cast<vec_t*>(&output[offset]);
 
             for (IndexType j = 0; j < NumOutputChunks; j += 2)
             {
+
+    #if defined(USE_SSE2)
+                constexpr int shift = 7;
+    #else
+                constexpr int shift = 6;
+    #endif
+
+                constexpr int MaskWidth = sizeof(vec_t) / sizeof(int32_t);
+                uint32_t currMask = 0;
+                for (IndexType k = 0; k < 2; ++k) {
                     // What we want to do is multiply inputs in a pairwise manner
                     // (after clipping), and then shift right by 9. Instead, we
                     // shift left by 7, and use mulhi, stripping the bottom 16 bits,
@@ -429,16 +457,6 @@ class FeatureTransformer {
                     // "vqdmulhq_s16" also doubles the return value after the
                     // multiplication, adding an extra shift to the left by 1, so
                     // we compensate by shifting less before the multiplication.
-
-    #if defined(USE_SSE2)
-                constexpr int shift = 7;
-    #else
-                constexpr int shift = 6;
-    #endif
-
-                constexpr int MaskWidth = sizeof(vec_t) / sizeof(int32_t);
-                uint32_t currMask = 0;
-                for (IndexType k = 0; k < 2; ++k) {
                     const vec_t sum0a =
                       vec_max_16(vec_min_16(in0[(j + k) * 2 + 0], One), Zero);
                     const vec_t sum0b =
@@ -452,8 +470,21 @@ class FeatureTransformer {
                     const vec_t prod = vec_packus_16(pa, pb);
 
                     out[j + k] = prod;
+                    #if SPARSE
                     currMask |= vec_nnz(prod) << (k * MaskWidth);
+                    #endif
                 }
+
+                #if SPARSE
+                constexpr int NumSlices = MaskWidth / 4;
+                for (IndexType k = 0; k < NumSlices; ++k) {
+                    auto slice = (nnz >> (k * 8)) & 0xFF;
+                    const auto offsets = vec128_load(reinterpret_cast<const vec128_t*>(&LookupIndices[slice]));
+                    vec128_storeu(reinterpret_cast<vec128_t*>(&nnz[nnzCount]), vec128_add(base, offsets));
+                    nnzCount += popcount(slice);
+                    base = vec128_add(base, increment);
+                }
+                #endif
             }
 
 #else
