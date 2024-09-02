@@ -450,7 +450,7 @@ class FeatureTransformer {
     // We go backwards recursively until we either find a computed state to update from,
     // or we return a failure and refresh.
     template<Color Perspective>
-    bool update_accumulator_incremental(StateInfo* curr_state, Square ksq) const {
+    bool update_accumulator_incremental(StateInfo* curr_state, Square ksq, int ops_less_than_refresh) const {
 
         // If the accumulator is up to date, no updates or refresh are required
         if ((curr_state->*accPtr).computed[Perspective]) return true;
@@ -458,12 +458,15 @@ class FeatureTransformer {
         // If a refresh is required, we cannot perform efficient updates.
         if (FeatureSet::requires_refresh(curr_state)) return false;
 
+        // If a refresh is more worth it than updating incrementally, we refresh instead
+        if (ops_less_than_refresh < 0) return false;
+
         // If the previous state doesnt exist and our state is not updated then we have to refresh
         StateInfo* prev_state = curr_state->previous;
         if (prev_state == nullptr) return false;
 
         // If we were unable to update the previous state, we can't update this state on top of it
-        bool prev_success = update_accumulator_incremental<Perspective>(prev_state, ksq);
+        bool prev_success = update_accumulator_incremental<Perspective>(prev_state, ksq, ops_less_than_refresh - curr_state->dirtyPiece.dirty_num);
         if (!prev_success) return false;
 
         // Set our accumulator to computed, as we are going to update it
@@ -737,7 +740,7 @@ class FeatureTransformer {
                             AccumulatorCaches::Cache<HalfDimensions>* cache) const {
 
         const Square ksq = pos.square<KING>(Perspective);
-        bool success = update_accumulator_incremental<Perspective>(pos.state(), ksq);
+        bool success = update_accumulator_incremental<Perspective>(pos.state(), ksq, FeatureSet::refresh_cost(pos));
 
         // If we were unable to update the accumulator incrementally due to a king move,
         // we refresh the accumulator
