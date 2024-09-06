@@ -456,7 +456,7 @@ class FeatureTransformer {
         if ((curr_state->*accPtr).computed[Perspective]) return true;
 
         // If a refresh is required, we cannot perform efficient updates.
-        if (FeatureSet::requires_refresh(curr_state)) return false;
+        if (FeatureSet::requires_refresh(curr_state, Perspective)) return false;
 
         // If a refresh is more worth it than updating incrementally, we refresh instead
         if (ops_less_than_refresh < 0) return false;
@@ -496,34 +496,34 @@ class FeatureTransformer {
 
         const IndexType offsetR0 = HalfDimensions * removed[0];
         auto            columnR0 = reinterpret_cast<const vec_t*>(&weights[offsetR0]);
-        const IndexType offsetA  = HalfDimensions * added[0];
-        auto            columnA  = reinterpret_cast<const vec_t*>(&weights[offsetA]);
+        const IndexType offsetA0 = HalfDimensions * added[0];
+        auto            columnA0 = reinterpret_cast<const vec_t*>(&weights[offsetA0]);
         const IndexType offsetPsqtR0 = PSQTBuckets * removed[0];
         auto columnPsqtR0 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtR0]);
-        const IndexType offsetPsqtA = PSQTBuckets * added[0];
-        auto columnPsqtA = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtA]);
+        const IndexType offsetPsqtA0 = PSQTBuckets * added[0];
+        auto columnPsqtA0 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtA0]);
 
-        // It is not possible to have more than 1 added piece, as we cannot move 2 pieces at once without moving the king (castling),
-        // which would require a refresh.
+        // It is not possible to have more than 2 added pieces.
         // We cannot have more than 2 removed pieces as we cannot capture 2 pieces in 1 turn.
-        assert(added.size() == 1);
+        assert(added.size() == 1 || added.size() == 2);
         assert(removed.size() == 1 || removed.size() == 2);
 
-        // We specialcase captures and quiets
-        if (removed.size() == 1)
+        // Quiet moves
+        if (added.size() == 1 && removed.size() == 1)
         {
             // Update regular accumulator
             for (IndexType k = 0; k < HalfDimensions * sizeof(BiasType) / sizeof(vec_t);
                  ++k)
-                accOut[k] = vec_add_16(vec_sub_16(accIn[k], columnR0[k]), columnA[k]);
+                accOut[k] = vec_add_16(vec_sub_16(accIn[k], columnR0[k]), columnA0[k]);
 
             // Update PSQT accumulator
             for (std::size_t k = 0; k < PSQTBuckets * sizeof(PSQTWeightType) / sizeof(psqt_vec_t);
                  ++k)
                 accPsqtOut[k] = vec_add_psqt_32(vec_sub_psqt_32(accPsqtIn[k], columnPsqtR0[k]),
-                                                columnPsqtA[k]);
+                                                columnPsqtA0[k]);
         }
-        else if (removed.size() == 2)
+        // Captures
+        else if (added.size() == 1 && removed.size() == 2)
         {
             const IndexType offsetR1 = HalfDimensions * removed[1];
             auto            columnR1 = reinterpret_cast<const vec_t*>(&weights[offsetR1]);
@@ -533,14 +533,39 @@ class FeatureTransformer {
             // Update regular accumulator
             for (IndexType k = 0; k < HalfDimensions * sizeof(BiasType) / sizeof(vec_t);
                  ++k)
-                accOut[k] = vec_sub_16(vec_add_16(accIn[k], columnA[k]),
+                accOut[k] = vec_sub_16(vec_add_16(accIn[k], columnA0[k]),
                                        vec_add_16(columnR0[k], columnR1[k]));
 
             // Update PSQT accumulator
             for (std::size_t k = 0; k < PSQTBuckets * sizeof(PSQTWeightType) / sizeof(psqt_vec_t);
                  ++k)
                 accPsqtOut[k] =
-                  vec_sub_psqt_32(vec_add_psqt_32(accPsqtIn[k], columnPsqtA[k]),
+                  vec_sub_psqt_32(vec_add_psqt_32(accPsqtIn[k], columnPsqtA0[k]),
+                                  vec_add_psqt_32(columnPsqtR0[k], columnPsqtR1[k]));
+        }
+        // Castling
+        else
+        {
+            const IndexType offsetA1 = HalfDimensions * added[1];
+            auto            columnA1 = reinterpret_cast<const vec_t*>(&weights[offsetA1]);
+            const IndexType offsetR1 = HalfDimensions * removed[1];
+            auto            columnR1 = reinterpret_cast<const vec_t*>(&weights[offsetR1]);
+            const IndexType offsetPsqtA1 = PSQTBuckets * added[1];
+            auto columnPsqtA1 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtA1]);
+            const IndexType offsetPsqtR1 = PSQTBuckets * removed[1];
+            auto columnPsqtR1 = reinterpret_cast<const psqt_vec_t*>(&psqtWeights[offsetPsqtR1]);
+
+            // Update regular accumulator
+            for (IndexType k = 0; k < HalfDimensions * sizeof(BiasType) / sizeof(vec_t);
+                 ++k)
+                accOut[k] = vec_sub_16(vec_add_16(vec_add_16(accIn[k], columnA0[k]), columnA1[k]),
+                                       vec_add_16(columnR0[k], columnR1[k]));
+
+            // Update PSQT accumulator
+            for (std::size_t k = 0; k < PSQTBuckets * sizeof(PSQTWeightType) / sizeof(psqt_vec_t);
+                 ++k)
+                accPsqtOut[k] =
+                  vec_sub_psqt_32(vec_add_psqt_32(vec_add_psqt_32(accPsqtIn[k], columnPsqtA0[k]), columnPsqtA1[k]),
                                   vec_add_psqt_32(columnPsqtR0[k], columnPsqtR1[k]));
         }
 
