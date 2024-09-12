@@ -16,7 +16,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-//Definition of input features HalfKP of NNUE evaluation function
+// Definition of input features HalfKAv2_hm of NNUE evaluation function
 
 #ifndef NNUE_FEATURES_HALF_KA_V2_HM_H_INCLUDED
 #define NNUE_FEATURES_HALF_KA_V2_HM_H_INCLUDED
