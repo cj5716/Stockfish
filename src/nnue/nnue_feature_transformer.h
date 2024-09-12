@@ -570,7 +570,7 @@ class FeatureTransformer {
             for (StateInfo* st = computed; st != pos.state(); st = st->next)
             {
                 // Only update if no null move was made
-                if (st->added.size() == 0)
+                if (st->added.size() != 0)
                 {
                     // Only 3 types of moves; capture, quiet and castling
                     assert(st->added.size() == 1 || st->added.size() == 2);
