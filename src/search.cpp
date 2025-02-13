@@ -1037,7 +1037,7 @@ moves_loop:  // When in check, search starts here
         // Bigger value is better for long time controls
         if (ss->ttPv)
             r += 1031;
-        r += 2048*cheat_pruned;
+        r += 2304*cheat_pruned;
 
         // Step 14. Pruning at shallow depth.
         // Depth conditions are important for mate finding.
