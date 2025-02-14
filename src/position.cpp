@@ -1005,11 +1005,8 @@ void Position::do_castling(Color us, Square from, Square& to, Square& rfrom, Squ
 
 //Literally cheat and Take the checker out.
 //If still in check, your cheat is not applicable, fail the cheat.
-bool Position::cheat(StateInfo& newSt, const TranspositionTable& tt){
-    assert (checkers() && !more_than_one(checkers()));
+bool Position::cheat(Square to,StateInfo& newSt, const TranspositionTable& tt){
     assert(&newSt != st);
-    Bitboard Temp = checkers();
-    Square to = pop_lsb(Temp);
 
 
     // Copy some fields of the old state to our new StateInfo object except the
@@ -1083,7 +1080,7 @@ bool Position::cheat(StateInfo& newSt, const TranspositionTable& tt){
 
     if (attackers_to(square<KING>(us)) & pieces(them)){
         sideToMove = ~sideToMove;
-        set_check_info();
+        //set_check_info(); We'll undo anyway, so no need.
         return false;
     }
     sideToMove = ~sideToMove;

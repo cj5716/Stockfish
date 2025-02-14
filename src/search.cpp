@@ -942,26 +942,25 @@ Value Search::Worker::search(
 moves_loop:  // When in check, search starts here
     //Step 11.5: Cheat move pruning.
     bool cheat_pruned = false;
-    if (!PvNode && ttData.value < alpha -200 && ss->inCheck && !more_than_one(pos.checkers()) && !is_decisive(alpha) && is_valid(ttData.value) && !is_decisive(ttData.value)){
+    if (!PvNode && prevSq != SQ_NONE && (pos.piece_on(prevSq) != NO_PIECE)&& (type_of(pos.piece_on(prevSq)) != KING) && ttData.value < alpha -200 && !is_decisive(alpha) && is_valid(ttData.value) && !is_decisive(ttData.value)){
         //Depth R = std::min(int(eval - beta) / 237, 6) + depth / 3 + 5;
-        Bitboard Temp = pos.checkers();
-        Square cheat_square = pop_lsb(Temp);
-        Depth R = depth/2 + PieceValue[type_of(pos.piece_on(cheat_square))]/256 +2; //Depending on how much you cheated, reduce the depth by that amount.
-        Value cheatAlpha = alpha + PieceValue[type_of(pos.piece_on(cheat_square))]*5/8;
+
+        Depth R = depth/2 + PieceValue[type_of(pos.piece_on(prevSq))]/256 +2; //Depending on how much you cheated, reduce the depth by that amount.
+        Value cheatAlpha = alpha + PieceValue[type_of(pos.piece_on(prevSq))]*5/8;
         if (ttData.depth > DEPTH_UNSEARCHED)
         {
             ss->currentMove                   = Move::cheat();
             ss->continuationHistory           = &thisThread->continuationHistory[0][0][NO_PIECE][0];
             ss->continuationCorrectionHistory = &thisThread->continuationCorrectionHistory[NO_PIECE][0];
 
-            bool cheat_successful = pos.cheat(st,tt);
+            bool cheat_successful = pos.cheat(prevSq,st,tt);
             Value cheatValue = cheatAlpha; // Suppress warning.
             //std::cout<<"Cheat"<<std::endl;
 
             if (cheat_successful){
                 cheatValue = -search<NonPV>(pos, ss + 1, -cheatAlpha, -cheatAlpha + 1, depth-R, false);
             }
-            pos.undo_cheat_move(cheat_square);
+            pos.undo_cheat_move(prevSq);
             //You cheated and still bad?
             if (cheat_successful && cheatValue < cheatAlpha && !is_loss(cheatValue)){
                 cheat_pruned = true;
