@@ -940,35 +940,41 @@ Value Search::Worker::search(
     }
 
 moves_loop:  // When in check, search starts here
-    //Step 11.5: Cheat move pruning.
-    bool cheat_pruned = false;
-    if (!PvNode && prevSq != SQ_NONE && (pos.piece_on(prevSq) != NO_PIECE)&& (type_of(pos.piece_on(prevSq)) != KING) && ttData.value < alpha -200 && !is_decisive(alpha) && is_valid(ttData.value) && !is_decisive(ttData.value)){
-        //Depth R = std::min(int(eval - beta) / 237, 6) + depth / 3 + 5;
 
-        Depth R = depth/2 + PieceValue[type_of(pos.piece_on(prevSq))]/256 +2; //Depending on how much you cheated, reduce the depth by that amount.
-        Value cheatAlpha = alpha + PieceValue[type_of(pos.piece_on(prevSq))]/2;
-        if (ttData.depth > DEPTH_UNSEARCHED)
-        {
-            ss->currentMove                   = Move::cheat();
-            ss->continuationHistory           = &thisThread->continuationHistory[0][0][NO_PIECE][0];
-            ss->continuationCorrectionHistory = &thisThread->continuationCorrectionHistory[NO_PIECE][0];
+    // Step 12. Cheat move pruning.
+    if (    depth >= 4
+        &&  allNode
+        &&  ss->inCheck
+        && !thisThread->cheatedInTree
+        && !excludedMove
+        && (!ttData.bound || (ttData.bound & BOUND_UPPER))
+        &&  eval + 500 <= alpha
+        &&  pos.piece_on(prevSq) != NO_PIECE 
+        &&  type_of(pos.piece_on(prevSq)) != KING
+        && !is_decisive(alpha))
+    {
+        Depth R = 3;
 
-            bool cheat_successful = pos.cheat(prevSq,st,tt);
-            Value cheatValue = cheatAlpha; // Suppress warning.
-            //std::cout<<"Cheat"<<std::endl;
+        ss->currentMove                   = Move::cheat();
+        ss->continuationHistory           = &thisThread->continuationHistory[0][0][NO_PIECE][0];
+        ss->continuationCorrectionHistory = &thisThread->continuationCorrectionHistory[NO_PIECE][0];
 
-            if (cheat_successful){
-                cheatValue = -search<NonPV>(pos, ss + 1, -cheatAlpha, -cheatAlpha + 1, depth-R, false);
-            }
-            pos.undo_cheat_move(prevSq);
-            //You cheated and still bad?
-            if (cheat_successful && cheatValue < cheatAlpha && !is_loss(cheatValue)){
-                cheat_pruned = true;
-            }
-        }
+        thisThread->cheatedInTree = true;
+        bool cheatPossible = pos.cheat(prevSq, st, tt);
+
+        Value cheatValue = VALUE_NONE;
+
+        if (cheatPossible)
+            cheatValue = -search<NonPV>(pos, ss + 1, -alpha - 1, -alpha, depth - R, false);
+
+        thisThread->cheatedInTree = false;
+        pos.undo_cheat_move(prevSq);
+
+        if (cheatPossible && cheatValue <= alpha)
+            return is_decisive(cheatValue) ? alpha : cheatValue;
     }
 
-    // Step 12. A small Probcut idea
+    // Step 13. A small Probcut idea
     probCutBeta = beta + 413;
     if ((ttData.bound & BOUND_LOWER) && ttData.depth >= depth - 4 && ttData.value >= probCutBeta
         && !is_decisive(beta) && is_valid(ttData.value) && !is_decisive(ttData.value))
@@ -986,7 +992,7 @@ moves_loop:  // When in check, search starts here
 
     int moveCount = 0;
 
-    // Step 13. Loop through all pseudo-legal moves until no moves remain
+    // Step 14. Loop through all pseudo-legal moves until no moves remain
     // or a beta cutoff occurs.
     while ((move = mp.next_move()) != Move::none())
     {
@@ -1036,7 +1042,6 @@ moves_loop:  // When in check, search starts here
         // Bigger value is better for long time controls
         if (ss->ttPv)
             r += 1031;
-        r += 2048*cheat_pruned;
 
         // Step 14. Pruning at shallow depth.
         // Depth conditions are important for mate finding.
@@ -1056,7 +1061,7 @@ moves_loop:  // When in check, search starts here
                   thisThread->captureHistory[movedPiece][move.to_sq()][type_of(capturedPiece)];
 
                 // Futility pruning for captures
-                if (!givesCheck && lmrDepth < 7 && (!ss->inCheck || cheat_pruned))
+                if (!givesCheck && lmrDepth < 7 && !ss->inCheck)
                 {
                     Value futilityValue = ss->staticEval + 242 + 238 * lmrDepth
                                         + PieceValue[capturedPiece] + 95 * captHist / 700;
@@ -1090,7 +1095,7 @@ moves_loop:  // When in check, search starts here
                     futilityValue += 108;
 
                 // Futility pruning: parent node
-                if ((!ss->inCheck || cheat_pruned) && lmrDepth < 12 && futilityValue <= alpha)
+                if (!ss->inCheck && lmrDepth < 12 && futilityValue <= alpha)
                 {
                     if (bestValue <= futilityValue && !is_decisive(bestValue)
                         && !is_win(futilityValue))
@@ -1815,7 +1820,7 @@ void update_pv(Move* pv, Move move, const Move* childPv) {
 
     for (*pv++ = move; childPv && *childPv != Move::none();)
     {
-        assert(childPv->raw() != 130);
+        assert(childPv->is_ok());
         *pv++ = *childPv++;
     }
     *pv = Move::none();
