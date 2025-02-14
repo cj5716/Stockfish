@@ -145,8 +145,8 @@ class Position {
     void undo_move(Move m);
     void do_null_move(StateInfo& newSt, const TranspositionTable& tt);
     void undo_null_move();
-    bool cheat(Square to,StateInfo& newSt, const TranspositionTable& tt);
-    void undo_cheat_move(Square cheat_square);
+    bool cheat(StateInfo& newSt, const TranspositionTable& tt);
+    void undo_cheat_move();
 
     // Static Exchange Evaluation
     bool see_ge(Move m, int threshold = 0) const;

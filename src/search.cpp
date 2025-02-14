@@ -949,29 +949,23 @@ moves_loop:  // When in check, search starts here
         && !excludedMove
         && (!ttData.bound || (ttData.bound & BOUND_UPPER))
         &&  eval + 500 <= alpha
-        &&  pos.piece_on(prevSq) != NO_PIECE 
-        &&  type_of(pos.piece_on(prevSq)) != KING
         && !is_decisive(alpha))
     {
-        Depth R = 3;
+        if (pos.cheat(st, tt)) {
+            Depth R = 3;
 
-        ss->currentMove                   = Move::cheat();
-        ss->continuationHistory           = &thisThread->continuationHistory[0][0][NO_PIECE][0];
-        ss->continuationCorrectionHistory = &thisThread->continuationCorrectionHistory[NO_PIECE][0];
+            ss->currentMove                   = Move::cheat();
+            ss->continuationHistory           = &thisThread->continuationHistory[0][0][NO_PIECE][0];
+            ss->continuationCorrectionHistory = &thisThread->continuationCorrectionHistory[NO_PIECE][0];
 
-        thisThread->cheatedInTree = true;
-        bool cheatPossible = pos.cheat(prevSq, st, tt);
+            thisThread->cheatedInTree = true;
+            Value cheatValue = -search<NonPV>(pos, ss + 1, -alpha - 1, -alpha, depth - R, false);
+            thisThread->cheatedInTree = false;
 
-        Value cheatValue = VALUE_NONE;
-
-        if (cheatPossible)
-            cheatValue = -search<NonPV>(pos, ss + 1, -alpha - 1, -alpha, depth - R, false);
-
-        thisThread->cheatedInTree = false;
-        pos.undo_cheat_move(prevSq);
-
-        if (cheatPossible && cheatValue <= alpha)
-            return is_decisive(cheatValue) ? alpha : cheatValue;
+            pos.undo_cheat_move();
+            if (cheatValue <= alpha)
+                return is_decisive(cheatValue) ? alpha : cheatValue;
+        }
     }
 
     // Step 13. A small Probcut idea
