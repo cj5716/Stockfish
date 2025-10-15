@@ -1050,6 +1050,9 @@ void Position::apply_threat_changes(Bitboard mask, Piece pc, Square s, DirtyThre
 
         Bitboard newThreats = attacks_bb<AtkPt>(atkSq, occupied);
         Bitboard diff = st->threatsBySquare[atkSq] ^ newThreats;
+
+        st->threatsBySquare[atkSq] = newThreats;
+
         assert(!more_than_one(diff));
 
         if (diff)
