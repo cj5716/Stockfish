@@ -266,6 +266,14 @@ inline Bitboard attacks_bb(Piece pc, Square s, Bitboard occupied) {
     return attacks_bb(type_of(pc), s, occupied);
 }
 
+template <Piece Pc>
+inline Bitboard attacks_bb(Square s, Bitboard occupied) {
+    if (type_of(Pc) == PAWN) {
+        return PseudoAttacks[color_of(Pc)][s];
+    }
+    return attacks_bb<type_of(Pc)>(s, occupied);
+}
+
 // Counts the number of non-zero bits in a bitboard.
 inline int popcount(Bitboard b) {
 

@@ -1036,9 +1036,10 @@ void Position::undo_move(Move m) {
 template<Piece AtkPc, bool PutPiece>
 void Position::apply_threat_changes(Bitboard mask, Piece pc, Square s, DirtyThreats* const dts, Bitboard occupied) {
     constexpr PieceType AtkPt = type_of(AtkPc);
+    constexpr bool AtkColor = color_of(AtkPc);
     constexpr bool IsSlider = AtkPt == BISHOP || AtkPt == ROOK || AtkPt == QUEEN;
 
-    Bitboard atk = mask & pieces(AtkPc);
+    Bitboard atk = mask & pieces(AtkColor, AtkPt);
     while (atk)
     {
         Square atkSq = pop_lsb(atk);
@@ -1046,9 +1047,22 @@ void Position::apply_threat_changes(Bitboard mask, Piece pc, Square s, DirtyThre
         dts->list.push_back({AtkPc, pc, atkSq, s, PutPiece});
         st->threatsBySquare[atkSq] ^= s;
 
-        if constexpr (!IsSlider) continue;
+        if constexpr (!IsSlider)
+        {
+            /*
+            if (st->threatsBySquare[atkSq] != (attacks_bb<AtkPc>(atkSq, occupied) & occupied)) {
+                std::cout << fen() << '\n';
+                std::cout << (int)atkSq << '\n';
+                std::cout << (int)s << '\n';
+                std::cout << (int)AtkPt << '\n';
+                std::cout << (int)PutPiece << '\n';
+                assert(false);
+            }
+            */
+            continue;
+        }
 
-        Bitboard newThreats = attacks_bb<AtkPt>(atkSq, occupied);
+        Bitboard newThreats = attacks_bb<AtkPc>(atkSq, occupied) & occupied;
         Bitboard diff = st->threatsBySquare[atkSq] ^ newThreats;
 
         st->threatsBySquare[atkSq] = newThreats;

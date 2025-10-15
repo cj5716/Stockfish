@@ -164,6 +164,9 @@ class Position {
     int   rule50_count() const;
     Value non_pawn_material(Color c) const;
     Value non_pawn_material() const;
+    Bitboard threats_by_square(Square sq) const {
+        return st->threatsBySquare[sq];
+    }
 
     // Position consistency check, for debugging
     bool pos_is_ok() const;
