@@ -380,19 +380,13 @@ void Position::set_state() const {
         for (int cnt = 0; cnt < pieceCount[pc]; ++cnt)
             st->materialKey ^= Zobrist::psq[pc][8 + cnt];
 
-    std::memset(&st->threatsToSquare, 0, sizeof(st->threatsToSquare));
-    for (Piece pc : Pieces)
-    {
+    std::memset(&st->threatsBySquare, 0, sizeof(st->threatsBySquare));
+    for (Piece pc : Pieces) {
         Bitboard pieceBB = pieces(color_of(pc), type_of(pc));
         while (pieceBB)
         {
-            Square   square       = pop_lsb(pieceBB);
-            Bitboard pieceAttacks = attacks_bb(pc, square, pieces());
-            while (pieceAttacks)
-            {
-                Square attackedSquare = pop_lsb(pieceAttacks);
-                st->threatsToSquare[attackedSquare] |= square_bb(square);
-            }
+            Square sq = pop_lsb(pieceBB);
+            st->threatsBySquare[sq] = attacks_bb(pc, sq, pieces()) & pieces();
         }
     }
 }
@@ -1039,73 +1033,77 @@ void Position::undo_move(Move m) {
     assert(pos_is_ok());
 }
 
-template<bool put_piece>
-void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts) {
-    // Add newly threatened pieces
-    Bitboard occupied   = pieces();
-    Bitboard threatened = attacks_bb(pc, s, occupied);
-    while (threatened)
+template<Piece AtkPc, bool PutPiece>
+void Position::apply_threat_changes(Bitboard mask, Piece pc, Square s, DirtyThreats* const dts, Bitboard occupied) {
+    constexpr PieceType AtkPt = type_of(AtkPc);
+    constexpr bool IsSlider = AtkPt == BISHOP || AtkPt == ROOK || AtkPt == QUEEN;
+
+    Bitboard atk = mask & pieces(AtkPc);
+    while (atk)
     {
-        Square threatened_sq = pop_lsb(threatened);
-        Piece  threatened_pc = piece_on(threatened_sq);
+        Square atkSq = pop_lsb(atk);
 
-        assert(threatened_sq != s);
+        dts->list.push_back({AtkPc, pc, atkSq, s, PutPiece});
+        st->threatsBySquare[atkSq] ^= s;
 
-        if (threatened_pc)
-            dts->list.push_back({pc, threatened_pc, s, threatened_sq, put_piece});
+        if constexpr (!IsSlider) continue;
 
-        if (put_piece)
-            st->threatsToSquare[threatened_sq] |= square_bb(s);
-        else
-            st->threatsToSquare[threatened_sq] &= ~square_bb(s);
-    }
+        Bitboard newThreats = attacks_bb<AtkPt>(atkSq, occupied);
+        Bitboard diff = st->threatsBySquare[atkSq] ^ newThreats;
+        assert(!more_than_one(diff));
 
-    // Remove threats of sliders that are now blocked by pc
-    Bitboard sliders = pieces(BISHOP, ROOK, QUEEN) & ~square_bb(s) & st->threatsToSquare[s];
-    while (sliders)
-    {
-        Square slider_sq = pop_lsb(sliders);
-        Piece  slider    = piece_on(slider_sq);
-
-        // Move along the slider direction, starting at s
-        Direction direction = DirectionBetween[slider_sq][s];
-        assert(direction != NOWHERE);
-
-        Square threatened_sq = s;
-        while (safe_destination(threatened_sq, direction))
+        if (diff)
         {
-            threatened_sq += direction;
-
-            assert(threatened_sq != s);
-            assert(threatened_sq != slider_sq);
-
-            if (put_piece)
-                st->threatsToSquare[threatened_sq] &= ~square_bb(slider_sq);
-            else
-                st->threatsToSquare[threatened_sq] |= square_bb(slider_sq);
-
-            Piece threatened_pc = piece_on(threatened_sq);
-
-            if (threatened_pc)
-                dts->list.push_back({slider, threatened_pc, slider_sq, threatened_sq, !put_piece});
-
-            if (occupied & threatened_sq)
-                break;
+            Square newSq = lsb(diff);
+            Piece newPc = piece_on(newSq);
+            dts->list.push_back({AtkPc, newPc, atkSq, newSq, !PutPiece});
         }
     }
+}
 
-    // Add threats of sliders that were already threatening s
-    Bitboard incoming_threats = st->threatsToSquare[s];
-    while (incoming_threats)
+template<PieceType AtkPt, bool PutPiece>
+void Position::apply_threat_changes(Bitboard mask, Piece pc, Square s, DirtyThreats* const dts, Bitboard occupied) {
+    apply_threat_changes<make_piece(WHITE, AtkPt), PutPiece>(mask, pc, s, dts, occupied);
+    apply_threat_changes<make_piece(BLACK, AtkPt), PutPiece>(mask, pc, s, dts, occupied);
+}
+
+template<bool PutPiece>
+void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts) {
+
+    // Update all the attacks by us
+    Bitboard occupied   = pieces();
+    Bitboard threatened = attacks_bb(pc, s, occupied) & occupied;
+
+    if (PutPiece) st->threatsBySquare[s] = threatened;
+    else st->threatsBySquare[s] = 0;
+
+    while (threatened)
     {
-        Square src_sq = pop_lsb(incoming_threats);
-        Piece  src_pc = piece_on(src_sq);
+        Square threatenedSq = pop_lsb(threatened);
+        Piece  threatenedPc = piece_on(threatenedSq);
 
-        assert(src_sq != s);
-        assert(src_pc != NO_PIECE);
+        assert(threatenedSq != s);
 
-        dts->list.push_back({src_pc, pc, src_sq, s, put_piece});
+        dts->list.push_back({pc, threatenedPc, s, threatenedSq, PutPiece});
     }
+
+    // Update all the attacks we blocked / we were attacked by other pieces
+    Bitboard whitePawnAtkMsk = pawn_attacks_bb<BLACK>(s);
+    Bitboard blackPawnAtkMsk = pawn_attacks_bb<WHITE>(s);
+    apply_threat_changes<W_PAWN, PutPiece>(whitePawnAtkMsk, pc, s, dts, occupied);
+    apply_threat_changes<B_PAWN, PutPiece>(blackPawnAtkMsk, pc, s, dts, occupied);
+
+    Bitboard knightAtkMsk = attacks_bb<KNIGHT>(s);
+    Bitboard bishopAtkMsk = attacks_bb<BISHOP>(s, occupied);
+    Bitboard rookAtkMsk = attacks_bb<ROOK>(s, occupied);
+    Bitboard queenAtkMsk = rookAtkMsk | bishopAtkMsk;
+    Bitboard kingAtkMsk = attacks_bb<KING>(s);
+
+    apply_threat_changes<KNIGHT, PutPiece>(knightAtkMsk, pc, s, dts, occupied);
+    apply_threat_changes<BISHOP, PutPiece>(bishopAtkMsk, pc, s, dts, occupied);
+    apply_threat_changes<ROOK, PutPiece>(rookAtkMsk, pc, s, dts, occupied);
+    apply_threat_changes<QUEEN, PutPiece>(queenAtkMsk, pc, s, dts, occupied);
+    apply_threat_changes<KING, PutPiece>(kingAtkMsk, pc, s, dts, occupied);
 }
 
 // Helper used to do/undo a castling move. This is a bit
