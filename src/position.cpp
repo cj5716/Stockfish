@@ -783,8 +783,8 @@ DirtyBoardData Position::do_move(Move                      m,
             }
             else
             {
-                change_piece(pc, to, &dts);
                 remove_piece(from, &dts);
+                change_piece(pc, to, &dts);
             }
 
             st->pawnKey ^= Zobrist::psq[captured][capsq];
@@ -797,8 +797,8 @@ DirtyBoardData Position::do_move(Move                      m,
             if (type_of(captured) <= BISHOP)
                 st->minorPieceKey ^= Zobrist::psq[captured][capsq];
 
-            change_piece(pc, to, &dts);
             remove_piece(from, &dts);
+            change_piece(pc, to, &dts);
         }
 
         dp.remove_pc = captured;
