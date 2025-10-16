@@ -1138,11 +1138,11 @@ void Position::do_castling(Color               us,
         dp->add_sq                 = rto;
     }
 
-    // Remove both pieces first since squares could overlap in Chess960
-    bool overlap = (from | rfrom) == (to | rto);
+    bool swap = from == rto;
 
-    if (!overlap)
+    if (!swap)
     {
+        // Remove both pieces first since squares could overlap in Chess960
         remove_piece(Do ? from : to, dts);
         remove_piece(Do ? rfrom : rto, dts);
         board[Do ? from : to] = board[Do ? rfrom : rto] =
