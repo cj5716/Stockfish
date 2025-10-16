@@ -340,9 +340,6 @@ inline Piece Position::captured_piece() const { return st->capturedPiece; }
 inline void Position::change_piece(Piece pc, Square s, DirtyThreats* const dts) {
     Piece orig = board[s];
 
-    if (dts)
-        update_piece_threats<false, true>(orig, s, dts);
-
     board[s] = pc;
     byTypeBB[type_of(orig)] ^= s;
     byColorBB[color_of(orig)] ^= s;
@@ -354,7 +351,10 @@ inline void Position::change_piece(Piece pc, Square s, DirtyThreats* const dts) 
     pieceCount[make_piece(color_of(pc), ALL_PIECES)]++;
 
     if (dts)
+    {
+        update_piece_threats<false, true>(orig, s, dts);
         update_piece_threats<true, true>(pc, s, dts);
+    }
 }
 
 inline void Position::put_piece(Piece pc, Square s, DirtyThreats* const dts) {
