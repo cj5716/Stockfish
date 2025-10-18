@@ -190,17 +190,20 @@ void FullThreats::append_changed_indices(Square          ksq,
                                          const DiffType& diff,
                                          IndexList&      removed,
                                          IndexList&      added) {
-    for (const auto [attacker, attacked, from, to, add] : diff.list)
+    for (const auto [attacker, attacked, from, to] : diff.list[0])
     {
         IndexType index = make_index<Perspective>(attacker, from, to, attacked, ksq);
 
-        if (index == Dimensions)
-            continue;
-
-        if (add)
-            added.push_back(index);
-        else
+        if (index < Dimensions)
             removed.push_back(index);
+    }
+
+    for (const auto [attacker, attacked, from, to] : diff.list[1])
+    {
+        IndexType index = make_index<Perspective>(attacker, from, to, attacked, ksq);
+
+        if (index < Dimensions)
+            added.push_back(index);
     }
 }
 

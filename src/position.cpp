@@ -1036,7 +1036,7 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
         assert(threatened_sq != s);
         assert(threatened_pc);
 
-        dts->list.push_back({pc, threatened_pc, s, threatened_sq, put_piece});
+        dts->list[put_piece].push_back({pc, threatened_pc, s, threatened_sq});
     }
 
     Bitboard rAttacks = attacks_bb<ROOK>(s, pieces());
@@ -1066,10 +1066,10 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
             ray &= BetweenBB[s][threatened_sq];
 
             Piece threatened_pc = piece_on(threatened_sq);
-            dts->list.push_back({slider, threatened_pc, slider_sq, threatened_sq, !put_piece});
+            dts->list[!put_piece].push_back({slider, threatened_pc, slider_sq, threatened_sq});
         }
 
-        dts->list.push_back({slider, pc, slider_sq, s, put_piece});
+        dts->list[put_piece].push_back({slider, pc, slider_sq, s});
     }
 
     // Add threats of sliders that were already threatening s,
@@ -1083,7 +1083,7 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
         assert(src_sq != s);
         assert(src_pc != NO_PIECE);
 
-        dts->list.push_back({src_pc, pc, src_sq, s, put_piece});
+        dts->list[put_piece].push_back({src_pc, pc, src_sq, s});
     }
 }
 

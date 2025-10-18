@@ -295,13 +295,12 @@ struct DirtyPiece {
 struct DirtyThreat {
     Piece  pc, threatened_pc;
     Square pc_sq, threatened_sq;
-    bool   add;
 };
 
 using DirtyThreatList = ValueList<DirtyThreat, 64>;  // 32 is not enough, find better upper bound?
 
 struct DirtyThreats {
-    DirtyThreatList list;
+    DirtyThreatList list[2];
     Color           us;
     Square          prevKsq, ksq;
 };
