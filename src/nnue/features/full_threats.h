@@ -126,6 +126,12 @@ class FullThreats {
     // Returns whether the change stored in this DirtyPiece means
     // that a full accumulator refresh is required.
     static bool requires_refresh(const DiffType& diff, Color perspective);
+
+  private:
+
+    // Helper that only appends pawn active indices
+    template<Color Perspective, Color C>
+    static void append_active_pawn_indices(const Position& pos, IndexList& active, Square ksq);
 };
 
 }  // namespace Stockfish::Eval::NNUE::Features

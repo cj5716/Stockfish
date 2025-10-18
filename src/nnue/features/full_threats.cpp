@@ -97,81 +97,62 @@ IndexType FullThreats::make_index(Piece attkr, Square from, Square to, Piece att
 }
 
 // Get a list of indices for active features in ascending order
+template<Color Perspective, Color C>
+void FullThreats::append_active_pawn_indices(const Position &pos, IndexList& active, Square ksq) {
+    constexpr Color Side     = Color(Perspective ^ C);
+    constexpr Piece PawnType = make_piece(Side, PAWN);
+    constexpr auto Right     = (Side == WHITE) ? NORTH_EAST : SOUTH_WEST;
+    constexpr auto Left      = (Side == WHITE) ? NORTH_WEST : SOUTH_EAST;
+
+    Bitboard bb = pos.pieces(Side, PAWN);
+    Bitboard occupied = pos.pieces();
+    Bitboard attacks_right = shift<Right>(bb) & occupied;
+    Bitboard attacks_left  = shift<Left >(bb) & occupied;
+
+    while (attacks_right)
+    {
+        Square to   = pop_lsb(attacks_right);
+        Square from = to - Right;
+        Piece attkd = pos.piece_on(to);
+        IndexType index = make_index<Perspective>(PawnType, from, to, attkd, ksq);
+        if (index < Dimensions)
+            active.push_back(index);
+    }
+
+    while (attacks_left)
+    {
+        Square to   = pop_lsb(attacks_left);
+        Square from = to - Left;
+        Piece attkd = pos.piece_on(to);
+        IndexType index = make_index<Perspective>(PawnType, from, to, attkd, ksq);
+        if (index < Dimensions)
+            active.push_back(index);
+    }
+}
+
 template<Color Perspective>
 void FullThreats::append_active_indices(const Position& pos, IndexList& active) {
-    const auto& board   = pos.board;
-    const auto& pieceBB = pos.byTypeBB;
-    const auto& colorBB = pos.byColorBB;
+    Square   ksq         = pos.square<KING>(Perspective);
+    Bitboard occupied    = pos.pieces();
 
-    Square   ksq         = lsb(colorBB[Perspective] & pieceBB[KING]);
-    Color    order[2][2] = {{WHITE, BLACK}, {BLACK, WHITE}};
-    Bitboard occupied    = colorBB[WHITE] | colorBB[BLACK];
+    append_active_pawn_indices<Perspective, WHITE>(pos, active, ksq);
+    append_active_pawn_indices<Perspective, BLACK>(pos, active, ksq);
 
-    for (Color color : {WHITE, BLACK})
+    // Append non-pawn indices
+    Bitboard bb = occupied ^ pos.pieces(PAWN);
+    while (bb)
     {
-        for (PieceType pt = PAWN; pt <= KING; ++pt)
+        Square from = pop_lsb(bb);
+        Piece attkr = pos.piece_on(from);
+        Bitboard attacks = pos.attacks_by_sq(from) & occupied;
+
+        while (attacks)
         {
-            Color     c     = order[Perspective][color];
-            Piece     attkr = make_piece(c, pt);
-            Bitboard  bb    = pos.pieces(c, pt);
-            IndexList indices;
-
-            if (pt == PAWN)
-            {
-                auto right = (c == WHITE) ? NORTH_EAST : SOUTH_WEST;
-                auto left  = (c == WHITE) ? NORTH_WEST : SOUTH_EAST;
-                auto attacks_left =
-                  ((c == WHITE) ? shift<NORTH_EAST>(bb) : shift<SOUTH_WEST>(bb)) & occupied;
-                auto attacks_right =
-                  ((c == WHITE) ? shift<NORTH_WEST>(bb) : shift<SOUTH_EAST>(bb)) & occupied;
-
-                while (attacks_left)
-                {
-                    Square    to    = pop_lsb(attacks_left);
-                    Square    from  = to - right;
-                    Piece     attkd = board[to];
-                    IndexType index = make_index<Perspective>(attkr, from, to, attkd, ksq);
-
-                    if (index < Dimensions)
-                    {
-                        indices.push_back(index);
-                    }
-                }
-
-                while (attacks_right)
-                {
-                    Square    to    = pop_lsb(attacks_right);
-                    Square    from  = to - left;
-                    Piece     attkd = board[to];
-                    IndexType index = make_index<Perspective>(attkr, from, to, attkd, ksq);
-
-                    if (index < Dimensions)
-                    {
-                        indices.push_back(index);
-                    }
-                }
-            }
-            else
-            {
-                while (bb)
-                {
-                    Square   from    = pop_lsb(bb);
-                    Bitboard attacks = pos.attacks_by_sq(from) & occupied;
-                    while (attacks)
-                    {
-                        Square    to    = pop_lsb(attacks);
-                        Piece     attkd = board[to];
-                        IndexType index = make_index<Perspective>(attkr, from, to, attkd, ksq);
-                        if (index < Dimensions)
-                        {
-                            indices.push_back(index);
-                        }
-                    }
-                }
-            }
-
-            for (auto threat : indices)
-                active.push_back(threat);
+            Square to = pop_lsb(attacks);
+            Piece attkd = pos.piece_on(to);
+            IndexType index = make_index<Perspective>(attkr, from, to, attkd, ksq);
+            if (index < Dimensions)
+                active.push_back(index);
         }
     }
 }
