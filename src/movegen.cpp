@@ -206,17 +206,15 @@ Move* generate_pawn_moves(const Position& pos, Move* moveList, Bitboard target) 
 }
 
 
-template<Color Us, PieceType Pt>
-Move* generate_moves(const Position& pos, Move* moveList, Bitboard target) {
+template<Color Us>
+Move* generate_non_kp_moves(const Position& pos, Move* moveList, Bitboard target) {
 
-    static_assert(Pt != KING && Pt != PAWN, "Unsupported piece type in generate_moves()");
-
-    Bitboard bb = pos.pieces(Us, Pt);
+    Bitboard bb = pos.pieces(Us) & ~pos.pieces(KING, PAWN);
 
     while (bb)
     {
         Square   from = pop_lsb(bb);
-        Bitboard b    = attacks_bb<Pt>(from, pos.pieces()) & target;
+        Bitboard b    = pos.attacks_by_sq(from) & target;
 
         moveList = splat_moves(moveList, from, b);
     }
@@ -242,10 +240,7 @@ Move* generate_all(const Position& pos, Move* moveList) {
                                       : ~pos.pieces();  // QUIETS
 
         moveList = generate_pawn_moves<Us, Type>(pos, moveList, target);
-        moveList = generate_moves<Us, KNIGHT>(pos, moveList, target);
-        moveList = generate_moves<Us, BISHOP>(pos, moveList, target);
-        moveList = generate_moves<Us, ROOK>(pos, moveList, target);
-        moveList = generate_moves<Us, QUEEN>(pos, moveList, target);
+        moveList = generate_non_kp_moves<Us>(pos, moveList, target);
     }
 
     Bitboard b = attacks_bb<KING>(ksq) & (Type == EVASIONS ? ~pos.pieces(Us) : target);

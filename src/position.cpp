@@ -379,6 +379,17 @@ void Position::set_state() const {
     for (Piece pc : Pieces)
         for (int cnt = 0; cnt < pieceCount[pc]; ++cnt)
             st->materialKey ^= Zobrist::psq[pc][8 + cnt];
+
+    std::memset(&st->threatsBySquare, 0, sizeof(st->threatsBySquare));
+    for (Piece pc : Pieces)
+    {
+        Bitboard pieceBB = pieces(color_of(pc), type_of(pc));
+        while (pieceBB)
+        {
+            Square   sq         = pop_lsb(pieceBB);
+            st->threatsBySquare[sq] = attacks_bb(pc, sq, pieces());
+        }
+    }
 }
 
 // Overload to initialize the position object with the given endgame code string
@@ -598,7 +609,7 @@ bool Position::pseudo_legal(const Move m) const {
             return false;
 
         // Check if it's a valid capture, single push, or double push
-        const bool isCapture    = bool(attacks_bb<PAWN>(from, us) & pieces(~us) & to);
+        const bool isCapture    = bool(attacks_by_sq(from) & pieces(~us) & to);
         const bool isSinglePush = (from + pawn_push(us) == to) && empty(to);
         const bool isDoublePush = (from + 2 * pawn_push(us) == to)
                                && (relative_rank(us, from) == RANK_2) && empty(to)
@@ -607,7 +618,7 @@ bool Position::pseudo_legal(const Move m) const {
         if (!(isCapture || isSinglePush || isDoublePush))
             return false;
     }
-    else if (!(attacks_bb(type_of(pc), from, pieces()) & to))
+    else if (!(attacks_by_sq(from) & to))
         return false;
 
     // Evasions generator already takes care to avoid some kind of illegal moves
@@ -1026,8 +1037,10 @@ void Position::undo_move(Move m) {
 template<bool put_piece>
 void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts) {
     // Add newly threatened pieces
-    Bitboard occupied   = pieces();
-    Bitboard threatened = attacks_bb(pc, s, occupied) & occupied;
+    Bitboard occupied      = pieces();
+    Bitboard attacks       = put_piece ? attacks_bb(pc, s, occupied) : st->threatsBySquare[s];
+    Bitboard threatened    = attacks & occupied;
+    st->threatsBySquare[s] = put_piece ? attacks : 0;
     while (threatened)
     {
         Square threatened_sq = pop_lsb(threatened);
@@ -1039,18 +1052,12 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
         dts->list.push_back({pc, threatened_pc, s, threatened_sq, put_piece});
     }
 
-    Bitboard rAttacks = attacks_bb<ROOK>(s, pieces());
-    Bitboard bAttacks = attacks_bb<BISHOP>(s, pieces());
+    Bitboard rAttacks = attacks_bb<ROOK>(s, occupied);
+    Bitboard bAttacks = attacks_bb<BISHOP>(s, occupied);
     Bitboard qAttacks = rAttacks | bAttacks;
 
     Bitboard sliders =   (pieces(ROOK, QUEEN) & rAttacks)
                        | (pieces(BISHOP, QUEEN) & bAttacks);
-
-    Bitboard incoming_threats =   (attacks_bb<KNIGHT>(s, pieces()) & pieces(KNIGHT))
-                                | (pawn_attacks_bb<WHITE>(square_bb(s)) & pieces(BLACK, PAWN))
-                                | (pawn_attacks_bb<BLACK>(square_bb(s)) & pieces(WHITE, PAWN))
-                                | (attacks_bb<KING>(s, pieces()) & pieces(KING));
-
     while (sliders)
     {
         Square slider_sq = pop_lsb(sliders);
@@ -1069,12 +1076,20 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
             dts->list.push_back({slider, threatened_pc, slider_sq, threatened_sq, !put_piece});
         }
 
+        if (put_piece)
+            st->threatsBySquare[slider_sq] ^= ray;
+        else
+            st->threatsBySquare[slider_sq] |= ray;
+
         dts->list.push_back({slider, pc, slider_sq, s, put_piece});
     }
 
     // Add threats of sliders that were already threatening s,
     // sliders are already handled in the loop above
-
+    Bitboard incoming_threats =   (attacks_bb<KNIGHT>(s) & pieces(KNIGHT))
+                                | (pawn_attacks_bb<WHITE>(square_bb(s)) & pieces(BLACK, PAWN))
+                                | (pawn_attacks_bb<BLACK>(square_bb(s)) & pieces(WHITE, PAWN))
+                                | (attacks_bb<KING>(s) & pieces(KING));
     while (incoming_threats)
     {
         Square src_sq = pop_lsb(incoming_threats);

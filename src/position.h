@@ -53,6 +53,7 @@ struct StateInfo {
     int                             rule50;
     int                             pliesFromNull;
     Square                          epSquare;
+    std::array<Bitboard, SQUARE_NB> threatsBySquare;
 
     // Not copied when making a move (will be recomputed anyhow)
     Key        key;
@@ -153,16 +154,17 @@ class Position {
     Key non_pawn_key(Color c) const;
 
     // Other properties of the position
-    Color side_to_move() const;
-    int   game_ply() const;
-    bool  is_chess960() const;
-    bool  is_draw(int ply) const;
-    bool  is_repetition(int ply) const;
-    bool  upcoming_repetition(int ply) const;
-    bool  has_repeated() const;
-    int   rule50_count() const;
-    Value non_pawn_material(Color c) const;
-    Value non_pawn_material() const;
+    Color    side_to_move() const;
+    int      game_ply() const;
+    bool     is_chess960() const;
+    bool     is_draw(int ply) const;
+    bool     is_repetition(int ply) const;
+    bool     upcoming_repetition(int ply) const;
+    bool     has_repeated() const;
+    int      rule50_count() const;
+    Value    non_pawn_material(Color c) const;
+    Value    non_pawn_material() const;
+    Bitboard attacks_by_sq(Square sq) const;
 
     // Position consistency check, for debugging
     bool pos_is_ok() const;
@@ -281,7 +283,7 @@ inline Bitboard Position::attacks_by(Color c) const {
         Bitboard threats   = 0;
         Bitboard attackers = pieces(c, Pt);
         while (attackers)
-            threats |= attacks_bb<Pt>(pop_lsb(attackers), pieces());
+            threats |= attacks_by_sq(pop_lsb(attackers));
         return threats;
     }
 }
@@ -331,6 +333,10 @@ inline bool Position::capture(Move m) const {
 inline bool Position::capture_stage(Move m) const {
     assert(m.is_ok());
     return capture(m) || m.promotion_type() == QUEEN;
+}
+
+inline Bitboard Position::attacks_by_sq(Square sq) const {
+    return st->threatsBySquare[sq];
 }
 
 inline Piece Position::captured_piece() const { return st->capturedPiece; }

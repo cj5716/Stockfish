@@ -113,7 +113,7 @@ void FullThreats::append_active_indices(const Position& pos, IndexList& active) 
         {
             Color     c     = order[Perspective][color];
             Piece     attkr = make_piece(c, pt);
-            Bitboard  bb    = colorBB[c] & pieceBB[pt];
+            Bitboard  bb    = pos.pieces(c, pt);
             IndexList indices;
 
             if (pt == PAWN)
@@ -156,7 +156,7 @@ void FullThreats::append_active_indices(const Position& pos, IndexList& active) 
                 while (bb)
                 {
                     Square   from    = pop_lsb(bb);
-                    Bitboard attacks = (attacks_bb(pt, from, occupied)) &occupied;
+                    Bitboard attacks = pos.attacks_by_sq(from) & occupied;
                     while (attacks)
                     {
                         Square    to    = pop_lsb(attacks);
