@@ -1039,17 +1039,12 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
         dts->list.push_back({pc, threatened_pc, s, threatened_sq, put_piece});
     }
 
-    Bitboard rAttacks = attacks_bb<ROOK>(s, pieces());
-    Bitboard bAttacks = attacks_bb<BISHOP>(s, pieces());
+    Bitboard rAttacks = attacks_bb<ROOK>(s, occupied);
+    Bitboard bAttacks = attacks_bb<BISHOP>(s, occupied);
     Bitboard qAttacks = rAttacks | bAttacks;
 
     Bitboard sliders =   (pieces(ROOK, QUEEN) & rAttacks)
                        | (pieces(BISHOP, QUEEN) & bAttacks);
-
-    Bitboard incoming_threats =   (attacks_bb<KNIGHT>(s, pieces()) & pieces(KNIGHT))
-                                | (pawn_attacks_bb<WHITE>(square_bb(s)) & pieces(BLACK, PAWN))
-                                | (pawn_attacks_bb<BLACK>(square_bb(s)) & pieces(WHITE, PAWN))
-                                | (attacks_bb<KING>(s, pieces()) & pieces(KING));
 
     while (sliders)
     {
@@ -1074,7 +1069,10 @@ void Position::update_piece_threats(Piece pc, Square s, DirtyThreats* const dts)
 
     // Add threats of sliders that were already threatening s,
     // sliders are already handled in the loop above
-
+    Bitboard incoming_threats =   (attacks_bb<KNIGHT>(s) & pieces(KNIGHT))
+                                | (pawn_attacks_bb<WHITE>(square_bb(s)) & pieces(BLACK, PAWN))
+                                | (pawn_attacks_bb<BLACK>(square_bb(s)) & pieces(WHITE, PAWN))
+                                | (attacks_bb<KING>(s) & pieces(KING));
     while (incoming_threats)
     {
         Square src_sq = pop_lsb(incoming_threats);
