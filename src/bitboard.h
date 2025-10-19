@@ -260,6 +260,14 @@ inline Bitboard attacks_bb(PieceType pt, Square s, Bitboard occupied) {
     }
 }
 
+template <Piece Pc>
+inline Bitboard attacks_bb(Square s) {
+    if (type_of(Pc) == PAWN) {
+        return PseudoAttacks[color_of(Pc)][s];
+    }
+    return PseudoAttacks[type_of(Pc)][s];
+}
+
 inline Bitboard attacks_bb(Piece pc, Square s) {
     if (type_of(pc) == PAWN) {
         return PseudoAttacks[color_of(pc)][s];
