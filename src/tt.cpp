@@ -93,8 +93,8 @@ bool TTEntry::is_occupied() const { return bool(depth8); }
 void TTEntry::save(
   Key k, Value v, bool pv, Bound b, Depth d, Move m, Value ev, uint8_t generation8) {
 
-    // Preserve the old ttmove if we don't have a new one
-    if (m || uint16_t(k) != key16)
+    // Write the new ttmove in if we don't have an old one regardless of whether the rest of the info will be replaced
+    if (!move16 && uint16_t(k) == key16)
         move16 = m;
 
     // Overwrite less valuable entries (cheapest checks first)
@@ -109,6 +109,10 @@ void TTEntry::save(
         genBound8 = uint8_t(generation8 | uint8_t(pv) << 2 | b);
         value16   = int16_t(v);
         eval16    = int16_t(ev);
+
+        // Preserve the old ttmove if we don't have a new one
+        if (m || uint16_t(k) != key16)
+            move16 = m;
     }
     else if (depth8 + DEPTH_ENTRY_OFFSET >= 5 && Bound(genBound8 & 0x3) != BOUND_EXACT)
         depth8--;
