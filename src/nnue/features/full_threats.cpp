@@ -81,8 +81,8 @@ IndexType FullThreats::make_index(Piece attkr, Square from, Square to, Piece att
 
     // Some threats imply the existence of the corresponding ones in the opposite
     // direction. We filter them here to ensure only one such threat is active.
-    if ((map[enemy][type_of(attkr) - 1][type_of(attkd) - 1] >> 4)
-        || ((map[enemy][type_of(attkr) - 1][type_of(attkd) - 1] >> 3) && from < to))
+    if (!((mask[type_of(attkr) - 1] >> (type_of(attkd) - 1)) & 1)
+        || (type_of(attkr) == type_of(attkd) && (enemy || type_of(attkr) != PAWN) && from < to))
     {
         return Dimensions;
     }
@@ -91,7 +91,7 @@ IndexType FullThreats::make_index(Piece attkr, Square from, Square to, Piece att
 
     return IndexType(
       offsets[attkr][65]
-      + (color_of(attkd) * (numValidTargets[attkr] / 2) + (map[0][type_of(attkr) - 1][type_of(attkd) - 1] & 0x7))
+      + (color_of(attkd) * (numValidTargets[attkr] / 2) + popcount(mask[type_of(attkr) - 1] & ((1 << (type_of(attkd) - 1)) - 1)))
           * offsets[attkr][64]
       + offsets[attkr][from] + popcount((square_bb(to) - 1) & attacks));
 }
