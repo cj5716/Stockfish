@@ -81,11 +81,11 @@ IndexType FullThreats::make_index(Piece attkr, Square from, Square to, Piece att
 
     // Some threats imply the existence of the corresponding ones in the opposite
     // direction. We filter them here to ensure only one such threat is active.
-    if (!((mask[type_of(attkr) - 1] >> (type_of(attkd) - 1)) & 1)
-        || (type_of(attkr) == type_of(attkd) && (enemy || type_of(attkr) != PAWN) && from < to))
-    {
+    if (!((mask[type_of(attkr) - 1] >> (type_of(attkd) - 1)) & 1))
         return Dimensions;
-    }
+
+    if ((enemy || (attkr == attkd && type_of(attkr) != PAWN)) && from < to)
+        return Dimensions;
 
     Bitboard attacks = attacks_bb(attkr, from);
 
