@@ -78,8 +78,7 @@ class FullThreats {
     // clang-format on
 
     struct FusedUpdateData {
-        Bitboard dp2removedOriginBoard = 0;
-        Bitboard dp2removedTargetBoard = 0;
+        Bitboard dp2removedDeltaBoard = 0;
 
         Square dp2removed;
     };

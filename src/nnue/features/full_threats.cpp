@@ -253,31 +253,19 @@ void FullThreats::append_changed_indices(Square           ksq,
 
         if (fusedData)
         {
-            if (from == fusedData->dp2removed)
-            {
-                if (add)
-                {
-                    if (first)
-                    {
-                        fusedData->dp2removedOriginBoard |= square_bb(to);
-                        continue;
-                    }
-                }
-                else if (fusedData->dp2removedOriginBoard & square_bb(to))
-                    continue;
-            }
+            Bitboard fromTo = from | to;
 
-            if (to != SQ_NONE && to == fusedData->dp2removed)
+            if (fromTo & fusedData->dp2removed)
             {
                 if (add)
                 {
                     if (first)
                     {
-                        fusedData->dp2removedTargetBoard |= square_bb(from);
+                        fusedData->dp2removedDeltaBoard |= fromTo;
                         continue;
                     }
                 }
-                else if (fusedData->dp2removedTargetBoard & square_bb(from))
+                else if (fusedData->dp2removedDeltaBoard & (fromTo ^ fusedData->dp2removed))
                     continue;
             }
         }
